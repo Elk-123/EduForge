@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  db:
+    image: pgvector/pgvector:pg16  # 官方带向量插件的镜像
+    container_name: eduforge_db
+    environment:
+      POSTGRES_USER: eduforge
+      POSTGRES_PASSWORD: eduforge_password
+      POSTGRES_DB: eduforge_main
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
