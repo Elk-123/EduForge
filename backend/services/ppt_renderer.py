@@ -1,97 +1,67 @@
+# backend/services/ppt_renderer.py
 from pptx import Presentation
-from pptx.util import Inches, Pt
-import json
+from schemas.dsl import PPTDocument
 import os
 
 class PPTRenderer:
     def __init__(self, template_path=None):
-        # 如果没有模板，使用默认空白模板
-        self.prs = Presentation(template_path) if template_path and os.path.exists(template_path) else Presentation()
+        self.template_path = template_path
 
-    def create_slide(self, page_data):
-        """根据 DSL 类型分发渲染逻辑"""
-        # PPTX 默认母版索引: 0=标题页, 1=标题+内容页
-        layout_map = {"title": 0, "content_list": 1} 
+    def render(self, dsl_data, output_file: str) -> str:
+        # 1. 数据兼容层：确保我们处理的是 Pydantic 对象
+        if isinstance(dsl_data, dict):
+            try:
+                dsl_data = PPTDocument(**dsl_data)
+            except Exception as e:
+                print(f"⚠️ [Renderer] 数据格式转换警告: {e}")
+                self._create_fallback_ppt(output_file, "AI 数据结构不匹配")
+                return output_file
+
+        # 2. 准备画布
+        prs = Presentation(self.template_path) if self.template_path else Presentation()
         
-        # 获取布局，如果没有对应的类型，默认使用类型 1
-        layout_index = layout_map.get(page_data.get('type'), 1)
-        slide_layout = self.prs.slide_layouts[layout_index]
-        slide = self.prs.slides.add_slide(slide_layout)
-
-        content = page_data.get('content', {})
-
-        # --- 通用逻辑: 设置标题 ---
-        # 并不是所有版式都有标题占位符，先判断一下
-        if slide.shapes.title and 'title' in content:
-            slide.shapes.title.text = content['title']
-
-        # --- 针对 "title" (封面页) 的特殊逻辑 ---
-        if page_data['type'] == 'title':
-            # 尝试找副标题占位符 (通常是占位符索引 1)
-            if len(slide.placeholders) > 1 and 'subtitle' in content:
-                slide.placeholders[1].text = content['subtitle']
-
-        # --- 针对 "content_list" (正文列表) 的特殊逻辑 ---
-        if page_data['type'] == 'content_list':
-            # 尝试找正文文本框 (通常是占位符索引 1)
-            if len(slide.placeholders) > 1 and 'items' in content:
-                body_shape = slide.placeholders[1]
-                tf = body_shape.text_frame
-                tf.clear() # 清除默认文本
-
-                for item in content['items']:
-                    p = tf.add_paragraph()
-                    p.text = item
-                    p.level = 0 # 缩进级别
-
-        # --- 添加演讲者备注 (Notes) ---
-        if 'notes' in page_data:
-            if slide.has_notes_slide:
-                notes_slide = slide.notes_slide
-                text_frame = notes_slide.notes_text_frame
-                text_frame.text = page_data['notes']
-
-    def render(self, dsl_json: dict, output_file: str):
-        # 容错处理：确保 pages 存在
-        if 'pages' not in dsl_json:
-            print("Error: Invalid DSL format, missing 'pages'")
-            return
-
-        for page in dsl_json['pages']:
-            self.create_slide(page)
-        
-        self.prs.save(output_file)
-        print(f"✅ PPT 生成成功: {output_file}")
+        try:
+            # 3. 开始渲染每一页
+            for page in dsl_data.pages:
+                if page.page_type == 'title':
+                    slide_layout = prs.slide_layouts[0] # 0号母版通常是封面
+                    slide = prs.slides.add_slide(slide_layout)
+                    slide.shapes.title.text = page.content.title
+                    if page.content.subtitle and len(slide.placeholders) > 1:
+                        slide.placeholders[1].text = page.content.subtitle
+                else:
+                    slide_layout = prs.slide_layouts[1] # 1号母版通常是带标题的列表页
+                    slide = prs.slides.add_slide(slide_layout)
+                    slide.shapes.title.text = page.content.title
+                    # 填充正文列表
+                    if page.content.items and len(slide.placeholders) > 1:
+                        tf = slide.placeholders[1].text_frame
+                        # 写入第一行
+                        tf.text = page.content.items[0] if page.content.items else ""
+                        # 追加后面的行
+                        for item in page.content.items[1:]:
+                            p = tf.add_paragraph()
+                            p.text = item
+                
+                # 写入演讲者备注
+                if page.notes and slide.has_notes_slide:
+                    slide.notes_slide.notes_text_frame.text = page.notes
+                    
+            # 4. 保存文件 (最关键的一步)
+            prs.save(output_file)
+            print(f"✅ [Renderer] PPT 渲染成功，完美保存！")
+            
+        except Exception as e:
+            print(f"❌ [Renderer] 渲染引擎发生严重错误: {e}")
+            self._create_fallback_ppt(output_file, str(e))
+            
         return output_file
 
-# --- 测试入口 ---
-if __name__ == "__main__":
-    # 这里定义真实的测试数据 (Dict)，而不是 { ... }
-    mock_data = {
-      "theme": "dark_modern",
-      "pages": [
-        {
-          "type": "title",
-          "content": {
-            "title": "牛顿第二定律",
-            "subtitle": "高中物理必修一 / 讲师：AI老师"
-          },
-          "notes": "开场白：同学们好，今天我们来学习力学中最核心的定律。"
-        },
-        {
-          "type": "content_list",
-          "content": {
-            "title": "本节课目标",
-            "items": [
-                "1. 理解 F=ma 的物理含义", 
-                "2. 掌握控制变量法的实验设计", 
-                "3. 能够应用公式解决基础力学问题"
-            ]
-          },
-          "notes": "这里要强调一下控制变量法的重要性。"
-        }
-      ]
-    }
-
-    renderer = PPTRenderer()
-    renderer.render(mock_data, "test_output.pptx")
+    def _create_fallback_ppt(self, output_file: str, error_msg: str):
+        """降级方案：当渲染失败时，输出一个报错 PPT 占位，防止系统崩溃"""
+        print("⚠️ [Renderer] 正在生成安全降级 PPT 文件...")
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[0])
+        slide.shapes.title.text = "引擎渲染失败"
+        slide.placeholders[1].text = f"抱歉，AI 传回的数据未能成功渲染成排版。\n错误信息: {error_msg}"
+        prs.save(output_file)
