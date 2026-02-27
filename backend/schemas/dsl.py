@@ -1,3 +1,4 @@
+# backend/schemas/dsl.py (改进版：添加对话相关模型，不改原有PPTDocument)
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
@@ -14,3 +15,19 @@ class SlidePage(BaseModel):
 class PPTDocument(BaseModel):
     theme: str = Field(description="课件主题风格，如 'modern', 'classic'")
     pages: List[SlidePage] = Field(description="幻灯片页面列表")
+
+# 新增：对话模型
+class Message(BaseModel):
+    role: str = Field(..., description="user or assistant")
+    content: str = Field(..., description="消息内容")
+
+class ChatState(BaseModel):
+    history: List[Message] = Field(default_factory=list, description="对话历史")
+    file_content: str = Field("", description="上传文件提取的文本")  # 继承原有file_content
+    intent_complete: bool = False  # 是否意图完整
+    dsl_output: Optional[dict] = None  # 生成的DSL dict (原有格式)
+
+class ChatResponse(BaseModel):
+    message: str  # AI回复
+    is_complete: bool
+    session_id: Optional[str] = None  # 返回给前端会话ID
