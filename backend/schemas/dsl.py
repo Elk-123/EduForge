@@ -1,33 +1,41 @@
-# backend/schemas/dsl.py (改进版：添加对话相关模型，不改原有PPTDocument)
-from pydantic import BaseModel, Field
-from typing import List, Optional
+# backend/schemas/dsl.py
+from pydantic import BaseModel
+from typing import List, Dict, Any, Optional
 
-class SlideContent(BaseModel):
-    title: str = Field(description="幻灯片的主标题")
-    subtitle: Optional[str] = Field(None, description="副标题，仅在封面页使用")
-    items: Optional[List[str]] = Field(None, description="正文内容要点列表，每句话尽量简短")
+class PageContent(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    items: Optional[List[str]] = None
 
-class SlidePage(BaseModel):
-    page_type: str = Field(description="页面类型，只能是 'title' (封面) 或 'content' (正文内容)")
-    content: SlideContent = Field(description="幻灯片具体内容")
-    notes: Optional[str] = Field(None, description="教师演讲时的逐字稿备注")
+class Page(BaseModel):
+    page_type: str
+    content: PageContent
+    notes: Optional[str] = ""
 
 class PPTDocument(BaseModel):
-    theme: str = Field(description="课件主题风格，如 'modern', 'classic'")
-    pages: List[SlidePage] = Field(description="幻灯片页面列表")
+    theme: str = "modern"
+    pages: List[Page]
 
-# 新增：对话模型
 class Message(BaseModel):
-    role: str = Field(..., description="user or assistant")
-    content: str = Field(..., description="消息内容")
+    role: str
+    content: str
 
 class ChatState(BaseModel):
-    history: List[Message] = Field(default_factory=list, description="对话历史")
-    file_content: str = Field("", description="上传文件提取的文本")  # 继承原有file_content
-    intent_complete: bool = False  # 是否意图完整
-    dsl_output: Optional[dict] = None  # 生成的DSL dict (原有格式)
+    history: List[Dict[str, str]] = []
+    file_content: str = ""       
+    outline: str = ""
+    intent_complete: bool = False
+    
+    # UI 状态同步
+    status: str = "idle"         
+    current_dsl: Optional[Dict[str, Any]] = None 
+
+# 🌟 新增：把前端请求的模型也统一放在这里
+class ChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
-    message: str  # AI回复
+    message: str
     is_complete: bool
-    session_id: Optional[str] = None  # 返回给前端会话ID
+    session_id: str

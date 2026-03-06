@@ -23,4 +23,5 @@ python main.py
 10. 前端启动
 npm install
 npm run dev
-11. 
+---
+pip install langchain-community faiss-cpu sentence-transformers pymupdf
