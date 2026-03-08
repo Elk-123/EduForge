@@ -8,7 +8,7 @@ from typing import Optional
 
 # 1. 导入你已经创建好的数据库和认证模块
 from database import engine, Base
-from routers import auth 
+from routers import auth, generate  # 🌟 1. 导入 generate 路由
 
 from services.rag_service import rag_service
 from services.agent_core import AgentCore
@@ -38,7 +38,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 agent = AgentCore()
 
 # 挂载认证路由 (包含 /api/auth/register 和 /api/auth/login)
-app.include_router(auth.router)
+app.include_router(auth.router, prefix="/api/auth") # 建议统一前缀
+app.include_router(generate.router, prefix="/api/v1") # 🌟 2. 挂载生成路由
 
 # ==================== Gamma 核心交互接口 ====================
 
