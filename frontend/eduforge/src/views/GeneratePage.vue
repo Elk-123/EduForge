@@ -319,15 +319,62 @@ const selectLanguage = (language: string) => {
 
 // 点击示例卡片，填充到输入框
 const handleExampleClick = (example: string) => {
-  inputValue.value = example
+  // 如果输入框不是“正在生成”的状态，才允许填充
+  if (!inputValue.value.includes("正在")) {
+    inputValue.value = example
+  }
 }
 
 // 发送按钮点击事件
-const handleSend = () => {
-  if (inputValue.value.trim()) {
-    console.log('发送内容:', inputValue.value)
-    // TODO: 调用后端API发送内容
-    alert(`发送: ${inputValue.value}`)
+const handleSend = async () => {
+  // 校验：如果输入为空或没选方块（演示文稿/网页等），不执行
+  if (!inputValue.value.trim() || activeBlock.value === null) return
+
+  const userPrompt = inputValue.value
+  const currentBlock = activeBlock.value
+  
+  // 1. 状态提示
+  inputValue.value = "正在构思中..."
+
+  try {
+    // 2. 构造 URL 参数 (匹配后端 python 函数的参数名)
+    const params = new URLSearchParams({
+      subject: `主题:${userPrompt} | 风格:${selectedStyle.value} | 数量:${cardCount.value}`,
+      task_type: "outline", // 后端默认值
+      refined_outline: "",  // 后端默认值
+      mode: "dify"          // 强制走后端 dify 逻辑
+    })
+
+    // 3. 发起请求 (注意：路径要拼上 main.py 挂载的 /api/v1)
+    const response = await fetch(`http://localhost:8000/api/v1/generate-content?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        // 如果你的系统需要登录，请取消下面注释并确保 localStorage 有 token
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+
+    if (!response.ok) throw new Error('服务器响应失败')
+    if (!response.body) return
+
+    // 4. 处理流式数据 (实现打字机效果)
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    inputValue.value = "" // 清空状态提示，准备接收文字
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      
+      // 解码并实时追加到输入框
+      const chunk = decoder.decode(value, { stream: true })
+      inputValue.value += chunk
+    }
+
+  } catch (error) {
+    console.error("对接异常:", error)
+    alert("生成失败，请检查后端服务是否启动")
+    inputValue.value = userPrompt // 失败时恢复用户原输入
   }
 }
 
