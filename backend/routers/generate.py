@@ -1,31 +1,30 @@
-# backend/routers/generate.py
-from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse  # 【新增导入】
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel  # 🌟 新增导入 BaseModel
 from services.dify_service import DifyWorkflowClient
-# from services.agent_core import AgentCore 
 
 router = APIRouter()
 dify_client = DifyWorkflowClient()
 
-@router.post("/generate-content")
-async def generate_content(
-    subject: str, 
-    task_type: str = "outline", 
-    refined_outline: str = "", 
+# 🌟 1. 定义一个 Pydantic 模型来接收 JSON 请求体
+class GenerateRequest(BaseModel):
+    subject: str
+    task_type: str = "outline"
+    refined_outline: str = ""
     mode: str = "dify"
-):
-    if mode == "dify":
-        # 【关键修改】返回 StreamingResponse，并将 Content-Type 设置为 text/plain 
-        # 这样前端就能像打字机一样一段段接收到纯文本
+
+# 🌟 2. 将路由参数改为接收刚才定义的模型
+@router.post("/generate-content")
+async def generate_content(req: GenerateRequest):
+    if req.mode == "dify":
+        # 注意：这里改成了使用 req.subject, req.task_type 等
         return StreamingResponse(
             dify_client.stream_eduforge_workflow(
-                subject=subject, 
-                task_type=task_type, 
-                refined_outline=refined_outline
+                subject=req.subject, 
+                task_type=req.task_type, 
+                refined_outline=req.refined_outline
             ),
             media_type="text/plain"
         )
     else:
-        # 你原来的 LangGraph 逻辑（假设这里目前仍然是阻塞式，以后也可改成流式）
-        # result = await LangGraphAgent.run(subject)
         return {"source": "langgraph", "data": "original_logic_output"}
