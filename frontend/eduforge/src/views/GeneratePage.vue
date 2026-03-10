@@ -105,9 +105,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'  // 🌟 增加 useRoute
 
 const router = useRouter()
+const route = useRoute()  // 🌟 初始化 route
 const activeBlock = ref<number | null>(null)
 const inputValue = ref('')
 
@@ -136,11 +137,23 @@ onMounted(() => {
 })
 
 onMounted(() => {
-  document.addEventListener('click', () => {
-    Object.keys(dropdownOpen.value).forEach(key => {
-      dropdownOpen.value[key as keyof typeof dropdownOpen.value] = false
-    })
-  })
+  activeBlock.value = 1
+  
+  // 🌟 2. 新增：接收从 ChatPage2 或 ChatPage3 传过来的参数
+  if (route.query.text) {
+    // 如果是从粘贴文本页来的，自动填入输入框
+    inputValue.value = route.query.text as string;
+  } else if (route.query.template) {
+    // 如果是从模板页来的，也可以自动填入（可选）
+    inputValue.value = `使用模板：${route.query.template}。请帮我生成...`;
+  }
+
+  // 🌟 3. 自动切换文档/PPT方块高亮
+  if (route.query.type === 'document') {
+    activeBlock.value = 2;
+  } else {
+    activeBlock.value = 1;
+  }
 })
 
 const handleBack = () => {
@@ -182,65 +195,33 @@ const handleExampleClick = (example: string) => {
 }
 
 // 发送按钮点击事件（整合版：保留你的基础校验 + master的后端对接逻辑）
-const handleSend = async () => {
-  // 保留你的核心校验：输入为空不执行
+// GeneratePage.vue 的 handleSend
+const handleSend = () => {
   if (!inputValue.value.trim()) {
     console.log('发送内容为空，不执行');
     return;
   }
 
-  // 新增校验：没选方块（演示文稿/网页等），提示用户
   if (activeBlock.value === null) {
     alert("请先选择要生成的内容类型（演示文稿/文档）！");
     return;
   }
 
-  const userPrompt = inputValue.value
-  const currentBlock = activeBlock.value
+  // 1. 收集用户所有的设定
+  const userPrompt = inputValue.value;
+  const generateType = activeBlock.value === 1 ? 'presentation' : 'document';
   
-  // 1. 状态提示
-  inputValue.value = "正在构思中..."
-
-  try {
-    // 2. 构造 URL 参数 (匹配后端 python 函数的参数名)
-    const params = new URLSearchParams({
-      subject: `主题:${userPrompt} | 风格:${selectedStyle.value} | 数量:${cardCount.value}`,
-      task_type: "outline", // 后端默认值
-      refined_outline: "",  // 后端默认值
-      mode: "dify"          // 强制走后端 dify 逻辑
-    })
-
-    // 3. 发起请求 (注意：路径要拼上 main.py 挂载的 /api/v1)
-    const response = await fetch(`http://localhost:8000/api/v1/generate-content?${params.toString()}`, {
-      method: 'POST',
-      headers: {
-        // 如果你的系统需要登录，请取消下面注释并确保 localStorage 有 token
-        // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-
-    if (!response.ok) throw new Error('服务器响应失败')
-    if (!response.body) return
-
-    // 4. 处理流式数据 (实现打字机效果)
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    inputValue.value = "" // 清空状态提示，准备接收文字
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break;
-      
-      // 解码并实时追加到输入框
-      const chunk = decoder.decode(value, { stream: true })
-      inputValue.value += chunk
+  // 2. 带着参数跳转到“大纲预览页” (假设你的路由叫 /outline)
+  // 如果你的路由名字不一样，请把 '/outline' 换成你实际的大纲页面路径
+  router.push({
+    path: '/outline', 
+    query: {
+      prompt: userPrompt,
+      style: selectedStyle.value,
+      count: cardCount.value,
+      type: generateType
     }
-
-  } catch (error) {
-    console.error("对接异常:", error)
-    alert("生成失败，请检查后端服务是否启动")
-    inputValue.value = userPrompt // 失败时恢复用户原输入
-  }
+  });
 }
 
 const handleRefreshExample = () => {
