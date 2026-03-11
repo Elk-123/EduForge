@@ -9,13 +9,13 @@ load_dotenv()
 class DifyWorkflowClient:
     def __init__(self):
         self.api_key = os.getenv("DIFY_API_KEY")
-        self.base_url = "https://api.dify.ai/v1/workflows/run"
+        self.base_url = "https://api.dify.ai/v1/chat-messages"
 
     # 将原来的一次性返回方法改为异步生成器 (yield)
     async def stream_eduforge_workflow(
         self, 
         subject: str, 
-        task_type: str = "outline", 
+        stage: str = "outline", 
         refined_outline: str = "", 
         user_id: str = "eduforge_user"
     ):
@@ -27,10 +27,12 @@ class DifyWorkflowClient:
         payload = {
             "inputs": {
                 "subject": subject,
-                "task_type": task_type,
+                "stage": stage,  # 🌟 这里改为 stage，对应 Dify 里的变量名
                 "refined_outline": refined_outline
             },
+            "query": f"开始生成{subject}的{stage}", # 聊天模式必须传 query，内容可以随便写
             "response_mode": "streaming",  # 【关键修改1】改为流式
+            "conversation_id": "", # 如果是新对话留空
             "user": user_id
         }
         
@@ -49,6 +51,7 @@ class DifyWorkflowClient:
 
                 # 【关键修改3】逐行读取并解析 Dify 的 SSE 数据流
                 async for line in response.aiter_lines():
+                    print(f"DEBUG LINE: {line}") # 🌟 看看控制台打印的是不是空内容
                     # Dify 的流式数据以 "data: " 开头
                     if line.startswith("data: "):
                         try:
@@ -58,11 +61,12 @@ class DifyWorkflowClient:
                             
                             event_type = data_obj.get("event")
                             
-                            # 当节点正在输出文本块时 (text_chunk)
-                            if event_type == "text_chunk":
-                                text = data_obj.get("data", {}).get("text", "")
+                            # 🌟 修改点 3：聊天模式的文本事件名是 'answer' 而不是 'text_chunk'
+                            if event_type == "message":
+                                text = data_obj.get("answer", "")
                                 if text:
-                                    yield text  # 将文本片段实时推给路由
+                                    print(f"DEBUG >>> 正在发送文本分片: {repr(text)}")
+                                    yield f"data: {text}\n\n"
                                     
                             # 工作流执行出错
                             elif event_type == "error":
@@ -71,7 +75,8 @@ class DifyWorkflowClient:
                                 break
                                 
                             # 节点或工作流结束时，可以不做处理，或者打印日志
-                            elif event_type == "workflow_finished":
+                            elif event_type == "message_end":
+                                yield "data: [DONE]\n\n" # 告知前端流已结束
                                 break
 
                         except json.JSONDecodeError:

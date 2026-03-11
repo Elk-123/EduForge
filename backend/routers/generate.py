@@ -9,7 +9,7 @@ dify_client = DifyWorkflowClient()
 # 🌟 1. 定义一个 Pydantic 模型来接收 JSON 请求体
 class GenerateRequest(BaseModel):
     subject: str
-    task_type: str = "outline"
+    stage: str = "outline"  # 🌟 与 Dify 保持一致
     refined_outline: str = ""
     mode: str = "dify"
 
@@ -21,10 +21,16 @@ async def generate_content(req: GenerateRequest):
         return StreamingResponse(
             dify_client.stream_eduforge_workflow(
                 subject=req.subject, 
-                task_type=req.task_type, 
+                stage=req.stage, # 🌟 传参对齐
                 refined_outline=req.refined_outline
             ),
-            media_type="text/plain"
+            media_type="text/event-stream", # 🌟 SSE 标准流式类型
+            # 🌟 新增：强制禁用代理缓存
+            headers={
+                "X-Accel-Buffering": "no",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive"
+            }
         )
     else:
         return {"source": "langgraph", "data": "original_logic_output"}
