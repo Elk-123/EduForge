@@ -16,6 +16,8 @@ from services.agent_core import AgentCore
 from services.ppt_renderer import PPTRenderer 
 from services.session_manager import session_mgr
 from schemas.dsl import PPTDocument, ChatRequest, ChatResponse
+from services.lesson_renderer import LessonRenderer
+from services.lesson_plan_service import LessonPlanService
 
 # 自动创建数据库表（如果 users 表不存在会在此步创建）
 Base.metadata.create_all(bind=engine)
@@ -144,6 +146,27 @@ async def download_file(session_id: str, token: str = Depends(oauth2_scheme)):
         filename=filename,
         media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation'
     )
+
+lesson_renderer = LessonRenderer()
+
+lp_service_logic = LessonPlanService()
+
+@app.post("/api/lesson-plan/build")
+async def build_lesson_doc(session_id: str, content: str, title: str):
+    filename = f"lesson_{session_id}.docx"
+    output_path = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        # 🌟 关键：先解析 Markdown 表格
+        parsed_data = lp_service_logic.parse_markdown_to_data(content)
+        # 如果解析出了标题，覆盖传入的简单 title
+        parsed_data["title"] = title or parsed_data.get("title") 
+        
+        # 调用渲染器
+        lp_service_logic.renderer.render(parsed_data, output_path)
+        return {"status": "success", "download_url": f"/api/download-lesson/{session_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

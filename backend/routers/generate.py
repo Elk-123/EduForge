@@ -1,10 +1,14 @@
+# backend/routers/generate.py
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel  # 🌟 新增导入 BaseModel
 from services.dify_service import DifyWorkflowClient
+from services.lesson_plan_service import LessonPlanService
 
 router = APIRouter()
 dify_client = DifyWorkflowClient()
+# 专门的教案服务 (内部已处理独立 API KEY)
+lp_service = LessonPlanService()
 
 # 🌟 1. 定义一个 Pydantic 模型来接收 JSON 请求体
 class GenerateRequest(BaseModel):
@@ -34,3 +38,22 @@ async def generate_content(req: GenerateRequest):
         )
     else:
         return {"source": "langgraph", "data": "original_logic_output"}
+    
+# backend/routers/generate.py (新增部分)
+
+class LessonPlanRequest(BaseModel):
+    subject: str
+    stage: str = "lesson_plan" # 对应 Dify 里的分支判断
+    user_id: str = "eduforge_user"
+
+@router.post("/generate-lesson-plan")
+async def generate_lesson_plan(req: LessonPlanRequest):
+    # 🌟 这里必须改用 lp_service 提供的 stream 接口
+    return StreamingResponse(
+        lp_service.stream_lesson_plan(req.subject),
+        media_type="text/event-stream",
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache"
+        }
+    )
