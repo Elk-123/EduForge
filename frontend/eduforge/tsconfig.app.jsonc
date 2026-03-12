@@ -1,3 +1,5 @@
+// 错误：tsconfig.app.jsonc 文件内容为空或格式错误
+// 解决方案：创建正确的 tsconfig.app.json 文件
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {

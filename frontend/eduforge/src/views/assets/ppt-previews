@@ -1,0 +1,625 @@
+<!-- LoginPage.vue - 带左侧瀑布流PPT展示，保持原有底色 -->
+<template>
+  <div class="login-container">
+    <!-- 左侧瀑布流区域 - 透明背景，显示PPT预览图 -->
+    <div class="waterfall-container">
+      <div class="waterfall-content" :style="{ transform: `translateY(${scrollY}px)` }">
+        <!-- 第一列 - PPT模板 -->
+        <div class="waterfall-column">
+          <div v-for="(item, index) in waterfallItems.slice(0, 4)" :key="'col1-'+index" class="waterfall-item" :class="item.class">
+            <div class="ppt-preview" :style="{ 
+              backgroundImage: `url(${item.imgUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }">
+              <!-- 半透明遮罩层，保证文字可读性 -->
+              <div class="ppt-overlay"></div>
+              <div class="ppt-content">
+                <span class="ppt-icon iconfont" :class="item.icon"></span>
+                <span class="ppt-title">{{ item.title }}</span>
+                <span class="ppt-type">{{ item.type }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 第二列 - PPT模板 -->
+        <div class="waterfall-column">
+          <div v-for="(item, index) in waterfallItems.slice(4, 8)" :key="'col2-'+index" class="waterfall-item" :class="item.class">
+            <div class="ppt-preview" :style="{ 
+              backgroundImage: `url(${item.imgUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }">
+              <div class="ppt-overlay"></div>
+              <div class="ppt-content">
+                <span class="ppt-icon iconfont" :class="item.icon"></span>
+                <span class="ppt-title">{{ item.title }}</span>
+                <span class="ppt-type">{{ item.type }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 第三列 - PPT模板 -->
+        <div class="waterfall-column">
+          <div v-for="(item, index) in waterfallItems.slice(8, 12)" :key="'col3-'+index" class="waterfall-item" :class="item.class">
+            <div class="ppt-preview" :style="{ 
+              backgroundImage: `url(${item.imgUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }">
+              <div class="ppt-overlay"></div>
+              <div class="ppt-content">
+                <span class="ppt-icon iconfont" :class="item.icon"></span>
+                <span class="ppt-title">{{ item.title }}</span>
+                <span class="ppt-type">{{ item.type }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧登录卡片 - 保持原有样式不变 -->
+    <div class="login-card-wrapper">
+      <div class="gradient-bg"></div>
+      
+      <div class="login-card">
+        <h1 class="login-title">登录</h1>
+        
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            v-model="username"
+            placeholder="账号"
+            class="login-input"
+            @keyup.enter="handleLogin"
+          />
+          <span class="input-icon iconfont icon-yonghu"></span>
+        </div>
+        
+        <div class="input-wrapper">
+          <input 
+            :type="showPassword ? 'text' : 'password'" 
+            v-model="password"
+            placeholder="密码"
+            class="login-input"
+            @keyup.enter="handleLogin"
+          />
+          <span 
+            class="input-icon password-toggle" 
+            :class="showPassword ? 'icon-yanjing' : 'icon-yanjing-guanbi'"
+            @click="showPassword = !showPassword"
+          ></span>
+        </div>
+        
+        <div class="login-links">
+          <a href="#" class="forgot-link" @click.prevent="handleForgot">忘记密码？</a>
+          <a href="#" class="register-link" @click.prevent="goToRegister">注册账号</a>
+        </div>
+        
+        <button class="login-btn" @click="handleLogin" :disabled="isLoggingIn">
+          {{ isLoggingIn ? '登录中...' : '登录' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- 帮助按钮 -->
+    <div class="help-button" @click="handleHelp">?</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+// 导入PPT预览图片（根据实际图片文件名调整）
+import businessImg from '@/assets/ppt-previews/business.jpg'
+import productImg from '@/assets/ppt-previews/product.jpg'
+import reportImg from '@/assets/ppt-previews/report.jpg'
+import marketingImg from '@/assets/ppt-previews/marketing.jpg'
+import fundImg from '@/assets/ppt-previews/fund.jpg'
+import yearlyImg from '@/assets/ppt-previews/yearly.jpg'
+import teamImg from '@/assets/ppt-previews/team.jpg'
+import projectImg from '@/assets/ppt-previews/project.jpg'
+import marketImg from '@/assets/ppt-previews/market.jpg'
+import strategyImg from '@/assets/ppt-previews/strategy.jpg'
+import trainingImg from '@/assets/ppt-previews/training.jpg'
+import dataImg from '@/assets/ppt-previews/data.jpg'
+
+const router = useRouter()
+const username = ref('')
+const password = ref('')
+const showPassword = ref(false)
+const isLoggingIn = ref(false)
+const scrollY = ref(0)
+let animationFrame: number
+
+// PPT模板数据 - 添加imgUrl字段指向图片
+const waterfallItems = [
+  // 第一组
+  { 
+    title: '商业计划书',
+    type: 'PPT模板',
+    imgUrl: businessImg, // 图片路径
+    icon: 'icon-xinjian_PPTyanshiwengao',
+    class: 'item-business'
+  },
+  { 
+    title: '产品发布',
+    type: '演示文稿',
+    imgUrl: productImg,
+    icon: 'icon-wendang',
+    class: 'item-product'
+  },
+  { 
+    title: '季度汇报',
+    type: 'PPT模板',
+    imgUrl: reportImg,
+    icon: 'icon-mobansheji',
+    class: 'item-report'
+  },
+  { 
+    title: '营销方案',
+    type: '演示文稿',
+    imgUrl: marketingImg,
+    icon: 'icon-daoru',
+    class: 'item-marketing'
+  },
+  // 第二组
+  { 
+    title: '融资路演',
+    type: 'PPT模板',
+    imgUrl: fundImg,
+    icon: 'icon-xinjian_PPTyanshiwengao',
+    class: 'item-fund'
+  },
+  { 
+    title: '年度总结',
+    type: '演示文稿',
+    imgUrl: yearlyImg,
+    icon: 'icon-wendang',
+    class: 'item-yearly'
+  },
+  { 
+    title: '团队介绍',
+    type: 'PPT模板',
+    imgUrl: teamImg,
+    icon: 'icon-mobansheji',
+    class: 'item-team'
+  },
+  { 
+    title: '项目规划',
+    type: '演示文稿',
+    imgUrl: projectImg,
+    icon: 'icon-daoru',
+    class: 'item-project'
+  },
+  // 第三组
+  { 
+    title: '市场分析',
+    type: 'PPT模板',
+    imgUrl: marketImg,
+    icon: 'icon-xinjian_PPTyanshiwengao',
+    class: 'item-market'
+  },
+  { 
+    title: '战略规划',
+    type: '演示文稿',
+    imgUrl: strategyImg,
+    icon: 'icon-wendang',
+    class: 'item-strategy'
+  },
+  { 
+    title: '培训课件',
+    type: 'PPT模板',
+    imgUrl: trainingImg,
+    icon: 'icon-mobansheji',
+    class: 'item-training'
+  },
+  { 
+    title: '数据分析',
+    type: '演示文稿',
+    imgUrl: dataImg,
+    icon: 'icon-daoru',
+    class: 'item-data'
+  }
+]
+
+const validUsers = [
+  { username: 'admin', password: 'admin123' },
+  { username: 'user', password: 'user123' },
+  { username: 'test', password: 'test123' }
+]
+
+// 瀑布流动画
+const startWaterfallScroll = () => {
+  const scroll = () => {
+    scrollY.value -= 0.3
+    if (scrollY.value < -2000) {
+      scrollY.value = 0
+    }
+    animationFrame = requestAnimationFrame(scroll)
+  }
+  animationFrame = requestAnimationFrame(scroll)
+}
+
+onMounted(() => {
+  startWaterfallScroll()
+})
+
+onUnmounted(() => {
+  if (animationFrame) {
+    cancelAnimationFrame(animationFrame)
+  }
+})
+
+const handleLogin = async () => {
+  if (!username.value || !password.value) {
+    alert('请输入账号和密码')
+    return
+  }
+
+  isLoggingIn.value = true
+  
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    const user = validUsers.find(
+      u => u.username === username.value && u.password === password.value
+    )
+    
+    if (user) {
+      localStorage.setItem('isLoggedIn', 'true')
+      localStorage.setItem('username', username.value)
+      router.push('/home')
+    } else {
+      alert('用户名或密码错误')
+    }
+  } catch (error) {
+    alert('登录失败，请重试')
+  } finally {
+    isLoggingIn.value = false
+  }
+}
+
+const handleForgot = () => {
+  alert('请联系管理员重置密码，或使用测试账号：\nadmin/admin123\nuser/user123\ntest/test123')
+}
+
+const goToRegister = () => {
+  router.push('/register')
+}
+
+const handleHelp = () => {
+  alert('请输入您的账号和密码进行登录\n测试账号：admin/admin123')
+}
+</script>
+
+<style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 主容器 - 保持原有的渐变背景 */
+.login-container {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 245, 245, 0.3) 0%,
+    rgba(130, 212, 215, 0.6) 25%,
+    rgba(174, 230, 231, 0.6) 50%,
+    rgba(189, 236, 236, 0.4) 75%,
+    rgba(212, 245, 245, 0.3) 100%
+  );
+}
+
+/* 左侧瀑布流区域 - 完全透明，不添加任何背景 */
+.waterfall-container {
+  width: 60%;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: transparent; /* 完全透明，让父级背景显示 */
+}
+
+.waterfall-content {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  height: 200%;
+  will-change: transform;
+}
+
+.waterfall-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.waterfall-item {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  aspect-ratio: var(--ratio);
+  backdrop-filter: blur(2px);
+}
+
+.waterfall-item:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(11, 167, 175, 0.2);
+}
+
+/* PPT预览样式 - 改为背景图片 */
+.ppt-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative; /* 相对定位，用于遮罩层 */
+}
+
+/* 半透明遮罩层 - 保证文字清晰可见 */
+.ppt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2); /* 黑色半透明遮罩 */
+  z-index: 1;
+}
+
+.ppt-content {
+  text-align: center;
+  color: white;
+  padding: 20px;
+  position: relative; /* 层级高于遮罩层 */
+  z-index: 2;
+}
+
+.ppt-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  display: block;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ppt-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ppt-type {
+  display: block;
+  font-size: 12px;
+  opacity: 0.9;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* 不同卡片的高度比例 - 保持原样 */
+.item-business { --ratio: 3/4; }
+.item-product { --ratio: 4/5; }
+.item-report { --ratio: 7/5; }
+.item-marketing { --ratio: 1/1; }
+.item-fund { --ratio: 5/4; }
+.item-yearly { --ratio: 3/5; }
+.item-team { --ratio: 6/5; }
+.item-project { --ratio: 4/3; }
+.item-market { --ratio: 5/6; }
+.item-strategy { --ratio: 8/5; }
+.item-training { --ratio: 5/7; }
+.item-data { --ratio: 1/1; }
+
+/* 右侧登录卡片区域 - 完全保持原有样式，一点不改 */
+.login-card-wrapper {
+  width: 40%;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.gradient-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.2) 0%, transparent 50%);
+  z-index: 1;
+}
+
+.login-card {
+  position: relative;
+  width: 380px;
+  height: 450px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 15px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  z-index: 2;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.login-title {
+  text-align: center;
+  margin-bottom: 50px;
+  margin-top: 40px;
+  font-size: 42px;
+  color: #1e3c5c;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 260px;
+  margin: 0 auto 25px;
+}
+
+.login-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 40px 0 20px;
+  border-radius: 25px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  font-size: 15px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  color: #34495e;
+}
+
+.login-input:focus {
+  border-color: rgb(11, 167, 175);
+  box-shadow: 0 0 0 3px rgba(11, 167, 175, 0.2);
+  background: white;
+}
+
+.login-input::placeholder {
+  color: #999;
+}
+
+.input-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 18px;
+  transition: all 0.2s ease;
+}
+
+.password-toggle {
+  cursor: pointer;
+  z-index: 3;
+}
+
+.password-toggle:hover {
+  color: rgb(11, 167, 175);
+}
+
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  width: 260px;
+  margin: 0 auto 20px;
+}
+
+.forgot-link, .register-link {
+  color: #004288bf;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.forgot-link:hover, .register-link:hover {
+  color: rgb(11, 167, 175);
+  text-decoration: underline;
+}
+
+.login-btn {
+  height: 44px;
+  width: 140px;
+  margin-top: 20px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  font-size: 18px;
+  font-weight: 500;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  outline: none;
+  background: rgb(11, 167, 175);
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(11, 167, 175, 0.3);
+}
+
+.login-btn:hover:not(:disabled) {
+  background: rgb(8, 130, 136);
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(11, 167, 175, 0.4);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.help-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #34495e;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+.help-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .waterfall-container {
+    width: 50%;
+  }
+  
+  .login-card-wrapper {
+    width: 50%;
+  }
+}
+
+@media (max-width: 768px) {
+  .waterfall-container {
+    display: none;
+  }
+  
+  .login-card-wrapper {
+    width: 100%;
+  }
+}
+</style>
