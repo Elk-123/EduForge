@@ -246,16 +246,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const activeBlock = ref<number | null>(null)
 const inputValue = ref('')
-// 移除未使用的变量，或者注释掉
-// const selectedStyle = ref('默认风格')
 const showOutline = ref(false)
-// const customText = ref('') // 移除未使用的变量
 const cardStyle = ref('简约')
 const isLoading = ref(false)
 const isAddingCard = ref(false)
@@ -644,6 +642,20 @@ const handleGlobalClick = (e: MouseEvent) => {
 onMounted(() => {
   activeBlock.value = 1
   
+  // 从路由参数获取初始值
+  if (route.query.text) {
+    inputValue.value = route.query.text as string;
+  } else if (route.query.template) {
+    inputValue.value = `使用模板：${route.query.template}。请帮我生成...`;
+  }
+
+  // 自动切换文档/PPT方块高亮
+  if (route.query.type === 'document') {
+    activeBlock.value = 2;
+  } else {
+    activeBlock.value = 1;
+  }
+  
   // 添加全局点击事件监听
   document.addEventListener('click', handleGlobalClick)
   
@@ -726,7 +738,6 @@ const handleSend = async () => {
       language: selectedLanguage.value
     })
 
-    // 使用类型断言解决 TypeScript 错误
     const responseData = response.data as any
 
     if (responseData && responseData.outline) {
@@ -934,7 +945,6 @@ const handleAddCard = async () => {
       context: inputValue.value
     })
 
-    // 使用类型断言解决 TypeScript 错误
     const responseData = response.data as any
 
     if (responseData && responseData.card) {
