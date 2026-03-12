@@ -374,7 +374,7 @@ const updateImage = (image) => {
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   border-left: 1px solid rgba(255, 255, 255, 0.5);
-  width: 340px;
+  width: 350px;
   height: 100vh;
 }
 

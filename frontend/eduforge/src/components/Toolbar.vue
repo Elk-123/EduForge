@@ -169,6 +169,7 @@ const handleExport = () => {
   gap: 16px;
   height: 100%;
   overflow-y: auto;
+  bottom: 0; 
 }
 
 .tool-btn {

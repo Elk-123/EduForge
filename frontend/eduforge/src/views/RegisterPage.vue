@@ -1,6 +1,6 @@
 <template>
   <div class="register-container" @mousemove="handleMouseMove">
-    <!-- 眼睛区域：放在注册卡片上方 -->
+    <!-- 眼睛区域 -->
     <div class="eyes-wrapper">
       <div class="eye" ref="eyeLeftRef">
         <div class="pupil" :style="{ transform: pupilTransformLeft }"></div>
@@ -25,7 +25,7 @@
             class="register-input"
             @keyup.enter="handleRegister"
           />
-          <span class="input-icon iconfont icon-yonghu"></span>
+          <!-- 用户图标：已移除 -->
         </div>
         
         <div class="input-wrapper">
@@ -36,7 +36,7 @@
             class="register-input"
             @keyup.enter="handleRegister"
           />
-          <span class="input-icon iconfont icon-youxiang"></span>
+          <!-- 邮箱图标：已移除 -->
         </div>
         
         <div class="input-wrapper">
@@ -47,9 +47,11 @@
             class="register-input"
             @keyup.enter="handleRegister"
           />
+          <!-- 只有输入密码时才显示切换图标 -->
           <span 
+            v-if="password.length > 0"
             class="input-icon password-toggle iconfont" 
-            :class="showPassword ? 'icon-yanjing' : 'icon-yanjing-guanbi'"
+            :class="showPassword ? 'icon-icon-xianshi' : 'icon-icon-yanjing_yincang'"
             @click="showPassword = !showPassword"
           ></span>
         </div>
@@ -62,15 +64,17 @@
             class="register-input"
             @keyup.enter="handleRegister"
           />
+          <!-- 只有输入确认密码时才显示切换图标 -->
           <span 
+            v-if="confirmPassword.length > 0"
             class="input-icon password-toggle iconfont" 
-            :class="showConfirmPassword ? 'icon-yanjing' : 'icon-yanjing-guanbi'"
+            :class="showConfirmPassword ? 'icon-icon-xianshi' : 'icon-icon-yanjing_yincang'"
             @click="showConfirmPassword = !showConfirmPassword"
           ></span>
         </div>
         
         <div class="register-links">
-          <a href="#" class="login-link" @click.prevent="goToLogin">已有账号？立即登录</a>
+          <router-link to="/" class="login-link">已有账号？立即登录</router-link>
         </div>
         
         <button class="register-btn" @click.prevent="handleRegister" :disabled="isRegistering">
@@ -108,7 +112,7 @@ const pupilTransformRight = ref('translate(-50%, -50%)')
 // 鼠标位置跟踪
 const mousePosition = ref({ x: 0, y: 0 })
 const isMouseMoving = ref(false)
-let mouseMoveTimer: number | null = null
+let mouseMoveTimer: ReturnType<typeof setTimeout> | null = null
 
 // 限制瞳孔移动范围的函数
 const calculatePupilPosition = (eyeElement: HTMLElement, mouseX: number, mouseY: number): string => {
@@ -216,7 +220,6 @@ const handleRegister = async (): Promise<void> => {
   try {
     await new Promise(resolve => setTimeout(resolve, 800))
     
-    // 这里应该是实际的注册API调用
     // 模拟注册成功
     alert('注册成功！请登录')
     router.push('/')
@@ -226,10 +229,6 @@ const handleRegister = async (): Promise<void> => {
   } finally {
     isRegistering.value = false
   }
-}
-
-const goToLogin = (): void => {
-  router.push('/')
 }
 
 const handleHelp = (): void => {
@@ -243,6 +242,14 @@ const handleHelp = (): void => {
   padding: 0;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 确保iconfont样式正确 */
+.iconfont {
+  font-family: "iconfont" !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .register-container {
@@ -344,16 +351,17 @@ const handleHelp = (): void => {
   z-index: 1;
 }
 
+/* 统一卡片宽度为 420px，与忘记密码页面一致 */
 .register-card {
   position: relative;
-  width: 380px;
+  width: 420px;
   height: 550px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 15px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
   z-index: 2;
-  padding: 20px;
+  padding: 20px 30px;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -369,9 +377,10 @@ const handleHelp = (): void => {
   letter-spacing: 1px;
 }
 
+/* 输入框宽度设为100%，自适应卡片宽度 */
 .input-wrapper {
   position: relative;
-  width: 260px;
+  width: 100%;
   margin: 0 auto 20px;
 }
 
@@ -423,7 +432,7 @@ const handleHelp = (): void => {
 .register-links {
   display: flex;
   justify-content: center;
-  width: 260px;
+  width: 100%;
   margin: 10px auto 20px;
 }
 
@@ -507,8 +516,9 @@ const handleHelp = (): void => {
     margin-bottom: 20px;
   }
   .register-card {
-    width: 320px;
+    width: 340px;
     height: 520px;
+    padding: 20px;
   }
 }
 </style>

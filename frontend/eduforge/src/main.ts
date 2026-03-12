@@ -1,5 +1,6 @@
+// src/main.ts
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './router' // 引入路由
+import router from './router'
 
-createApp(App).use(router).mount('#app') // 必须调用 .use(router)
+createApp(App).use(router).mount('#app')

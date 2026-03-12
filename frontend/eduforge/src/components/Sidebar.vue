@@ -53,6 +53,7 @@ defineEmits(['select-slide', 'add-slide'])
 }
 
 .add-btn {
+  margin-top: 50px;
   padding: 12px;
   border: 2px dashed #cbd5e1;
   border-radius: 12px;

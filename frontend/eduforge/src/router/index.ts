@@ -12,7 +12,7 @@ import Generateword from '@/views/Generateword.vue'
 import ImportPage from '@/views/ImportPage.vue'
 import EditorView from '@/views/EditorView.vue'
 // 导入忘记密码页面
-import ForgotPasswordPage from '@/views/ForgotPasswordPage.vue'  // 新增
+import ForgotPasswordPage from '@/views/ForgotPasswordPage.vue'
 
 const routes = [
   {
@@ -25,7 +25,7 @@ const routes = [
     name: 'register',
     component: RegisterPage
   },
-  // 新增忘记密码路由
+  // 忘记密码路由
   {
     path: '/forgot-password',
     name: 'forgot-password',
@@ -68,7 +68,7 @@ const routes = [
     name: 'import',
     component: ImportPage
   },
-  // 新增编辑器路由
+  // 编辑器路由
   {
     path: '/editor',
     name: 'editor',
@@ -93,9 +93,10 @@ const router = createRouter({
 })
 
 // 路由守卫：检查是否需要登录
-router.beforeEach((to, from, next) => {
+// 使用 _from 前缀告诉 TypeScript 这个参数是故意不使用的
+router.beforeEach((to, _from, next) => {
   // 不需要登录验证的页面（登录页、注册页和忘记密码页）
-  const publicPages = ['/', '/register', '/forgot-password']  // 修改这里，添加忘记密码页
+  const publicPages = ['/', '/register', '/forgot-password']
   
   // 检查当前路径是否需要登录
   const authRequired = !publicPages.includes(to.path)

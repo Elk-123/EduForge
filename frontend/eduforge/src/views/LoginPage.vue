@@ -1,6 +1,6 @@
 <template>
   <div class="login-container" @mousemove="handleMouseMove">
-    <!-- 眼睛区域：放在登录卡片上方 -->
+    <!-- 眼睛区域 -->
     <div class="eyes-wrapper">
       <div class="eye" ref="eyeLeftRef">
         <div class="pupil" :style="{ transform: pupilTransformLeft }"></div>
@@ -25,7 +25,7 @@
             class="login-input"
             @keyup.enter="handleLogin"
           />
-          <span class="input-icon iconfont icon-yonghu"></span>
+          <!-- 账号图标：已移除 -->
         </div>
         
         <div class="input-wrapper">
@@ -36,9 +36,11 @@
             class="login-input"
             @keyup.enter="handleLogin"
           />
+          <!-- 只有输入密码时才显示切换图标 -->
           <span 
+            v-if="password.length > 0"
             class="input-icon password-toggle iconfont" 
-            :class="showPassword ? 'icon-yanjing' : 'icon-yanjing-guanbi'"
+            :class="showPassword ? 'icon-icon-xianshi' : 'icon-icon-yanjing_yincang'"
             @click="showPassword = !showPassword"
           ></span>
         </div>
@@ -80,7 +82,8 @@ const pupilTransformRight = ref('translate(-50%, -50%)')
 // 鼠标位置跟踪
 const mousePosition = ref({ x: 0, y: 0 })
 const isMouseMoving = ref(false)
-let mouseMoveTimer: number | null = null
+// 修复 timer 类型
+let mouseMoveTimer: ReturnType<typeof setTimeout> | null = null
 
 // 限制瞳孔移动范围的函数
 const calculatePupilPosition = (eyeElement: HTMLElement, mouseX: number, mouseY: number): string => {
@@ -194,16 +197,6 @@ const handleLogin = async (): Promise<void> => {
   }
 }
 
-// 修改：移除了弹窗，直接跳转到忘记密码页面
-// const handleForgot = (): void => {
-//   router.push('/forgot-password')
-// }
-
-// 注册跳转
-// const goToRegister = (): void => {
-//   router.push('/register')
-// }
-
 const handleHelp = (): void => {
   alert('请输入您的账号和密码进行登录\n测试账号：admin/admin123')
 }
@@ -215,6 +208,14 @@ const handleHelp = (): void => {
   padding: 0;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 确保iconfont样式正确 */
+.iconfont {
+  font-family: "iconfont" !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .login-container {
@@ -316,16 +317,17 @@ const handleHelp = (): void => {
   z-index: 1;
 }
 
+/* 统一卡片宽度为 420px，与忘记密码页面一致 */
 .login-card {
   position: relative;
-  width: 380px;
+  width: 420px;
   height: 450px;
   background: rgba(255, 255, 255, 0.5);
   border-radius: 15px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
   z-index: 2;
-  padding: 20px;
+  padding: 20px 30px;
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -341,9 +343,10 @@ const handleHelp = (): void => {
   letter-spacing: 1px;
 }
 
+/* 输入框宽度设为100%，自适应卡片宽度 */
 .input-wrapper {
   position: relative;
-  width: 260px;
+  width: 100%;
   margin: 0 auto 25px;
 }
 
@@ -395,7 +398,7 @@ const handleHelp = (): void => {
 .login-links {
   display: flex;
   justify-content: space-between;
-  width: 260px;
+  width: 100%;
   margin: 0 auto 20px;
 }
 
@@ -479,8 +482,9 @@ const handleHelp = (): void => {
     margin-bottom: 20px;
   }
   .login-card {
-    width: 320px;
+    width: 340px;
     height: 420px;
+    padding: 20px;
   }
 }
 </style>

@@ -2,21 +2,26 @@
 <template>
   <main class="canvas">
     <div v-if="currentSlide" class="slide" :style="{ background: currentSlide.bgColor || '#ffffff' }">
+      <!-- 修复光标问题：使用 v-model 风格的绑定，但通过 contenteditable 实现 -->
       <h1
         contenteditable
-        v-text="currentSlide.title"
-        @input="$emit('update-field', 'title', $event.target.innerText)"
         class="edit-title"
+        @input="handleTitleInput"
         @keydown.enter.prevent
-        :placeholder="'点击编辑标题'"
+        @keydown.delete="handleTitleDelete"
+        @blur="handleTitleBlur"
+        data-placeholder="点击编辑标题"
+        ref="titleRef"
       ></h1>
       
       <div
         contenteditable
-        v-text="currentSlide.content"
-        @input="$emit('update-field', 'content', $event.target.innerText)"
         class="edit-content"
-        :placeholder="'点击编辑内容'"
+        @input="handleContentInput"
+        @keydown.enter.prevent
+        @blur="handleContentBlur"
+        data-placeholder="点击编辑内容"
+        ref="contentRef"
       ></div>
 
       <div 
@@ -33,23 +38,27 @@
       </div>
 
       <div class="steps" v-if="currentSlide.steps?.length">
-        <div class="step" v-for="s in currentSlide.steps" :key="s.id">
+        <div class="step" v-for="(s, index) in currentSlide.steps" :key="s.id">
           <div class="step-num">{{ s.id }}</div>
           <div class="step-body">
             <div
               contenteditable
-              v-text="s.title"
-              @input="$emit('update-step', s, 'title', $event.target.innerText)"
               class="step-title"
+              @input="(e) => handleStepInput(s, 'title', e)"
               @keydown.enter.prevent
-              :placeholder="'步骤标题'"
+              @blur="(e) => handleStepBlur(s, 'title', e)"
+              :data-step-index="index"
+              data-placeholder="步骤标题"
+              :ref="el => setStepTitleRef(el, index)"
             ></div>
             <div
               contenteditable
-              v-text="s.desc"
-              @input="$emit('update-step', s, 'desc', $event.target.innerText)"
               class="step-desc"
-              :placeholder="'步骤描述'"
+              @input="(e) => handleStepInput(s, 'desc', e)"
+              @blur="(e) => handleStepBlur(s, 'desc', e)"
+              :data-step-index="index"
+              data-placeholder="步骤描述"
+              :ref="el => setStepDescRef(el, index)"
             ></div>
           </div>
         </div>
@@ -59,13 +68,145 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref, watch, onMounted, nextTick } from 'vue'
+
+const props = defineProps({
   currentSlide: {
     type: Object,
     default: () => ({ title: '', content: '', bgColor: '#ffffff', steps: [] })
   }
 })
-defineEmits(['update-field', 'update-step'])
+const emit = defineEmits(['update-field', 'update-step'])
+
+// 定义ref，用于初始化内容和维护光标
+const titleRef = ref(null)
+const contentRef = ref(null)
+const stepTitleRefs = ref([])
+const stepDescRefs = ref([])
+
+// 记录当前是否正在编辑，避免重复更新
+const isEditing = ref(false)
+
+// 设置步骤标题引用
+const setStepTitleRef = (el, index) => {
+  if (el) {
+    stepTitleRefs.value[index] = el
+  }
+}
+
+// 设置步骤描述引用
+const setStepDescRef = (el, index) => {
+  if (el) {
+    stepDescRefs.value[index] = el
+  }
+}
+
+// 更新所有可编辑元素的内容
+const updateEditableContent = async (newSlide) => {
+  if (!newSlide || isEditing.value) return
+  
+  await nextTick()
+  
+  // 更新标题
+  if (titleRef.value && titleRef.value.innerText !== newSlide.title) {
+    titleRef.value.innerText = newSlide.title || ''
+  }
+  
+  // 更新内容
+  if (contentRef.value && contentRef.value.innerText !== newSlide.content) {
+    contentRef.value.innerText = newSlide.content || ''
+  }
+  
+  // 更新步骤
+  if (newSlide.steps?.length) {
+    newSlide.steps.forEach((step, index) => {
+      if (stepTitleRefs.value[index] && stepTitleRefs.value[index].innerText !== (step.title || '')) {
+        stepTitleRefs.value[index].innerText = step.title || ''
+      }
+      if (stepDescRefs.value[index] && stepDescRefs.value[index].innerText !== (step.desc || '')) {
+        stepDescRefs.value[index].innerText = step.desc || ''
+      }
+    })
+  }
+}
+
+// 监听currentSlide变化，更新可编辑元素内容
+watch(
+  () => props.currentSlide,
+  (newSlide) => {
+    updateEditableContent(newSlide)
+  },
+  { immediate: true, deep: true }
+)
+
+// 处理标题输入
+const handleTitleInput = (e) => {
+  isEditing.value = true
+  emit('update-field', 'title', e.target.innerText)
+  // 输入完成后立即重置编辑状态，但保留一点延迟避免闪烁
+  setTimeout(() => {
+    isEditing.value = false
+  }, 100)
+}
+
+// 处理标题删除键（特殊处理空内容）
+const handleTitleDelete = (e) => {
+  // 如果内容为空，触发更新
+  if (e.target.innerText === '') {
+    emit('update-field', 'title', '')
+  }
+}
+
+// 处理标题失焦
+const handleTitleBlur = (e) => {
+  isEditing.value = false
+  // 确保空值被正确更新
+  if (e.target.innerText !== props.currentSlide.title) {
+    emit('update-field', 'title', e.target.innerText)
+  }
+}
+
+// 处理内容输入
+const handleContentInput = (e) => {
+  isEditing.value = true
+  emit('update-field', 'content', e.target.innerText)
+  setTimeout(() => {
+    isEditing.value = false
+  }, 100)
+}
+
+// 处理内容失焦
+const handleContentBlur = (e) => {
+  isEditing.value = false
+  if (e.target.innerText !== props.currentSlide.content) {
+    emit('update-field', 'content', e.target.innerText)
+  }
+}
+
+// 处理步骤输入
+const handleStepInput = (step, field, e) => {
+  isEditing.value = true
+  emit('update-step', step, field, e.target.innerText)
+  setTimeout(() => {
+    isEditing.value = false
+  }, 100)
+}
+
+// 处理步骤失焦
+const handleStepBlur = (step, field, e) => {
+  isEditing.value = false
+  const currentValue = field === 'title' ? step.title : step.desc
+  if (e.target.innerText !== currentValue) {
+    emit('update-step', step, field, e.target.innerText)
+  }
+}
+
+// 初始化ref数组
+onMounted(() => {
+  nextTick(() => {
+    updateEditableContent(props.currentSlide)
+  })
+})
 </script>
 
 <style scoped>
@@ -82,8 +223,8 @@ defineEmits(['update-field', 'update-step'])
 
 .slide {
   position: relative;
-  width: 1000px;  /* 缩小一点，16:9比例 */
-  height: 562.5px; /* 1000/16*9 = 562.5 */
+  width: 1000px;
+  height: 562.5px;
   background: #ffffff;
   border-radius: 24px;
   color: #2c3e50;
@@ -111,12 +252,17 @@ defineEmits(['update-field', 'update-step'])
   color: #1e3c5c;
   margin: 0;
   padding: 0;
+  cursor: text;
+  min-height: 1.3em;
 }
 
+/* 修复placeholder样式：改用data-attribute */
 .edit-title:empty:before {
-  content: attr(placeholder);
+  content: attr(data-placeholder);
   color: #94a3b8;
   font-weight: normal;
+  pointer-events: none;
+  cursor: text;
 }
 
 .edit-content {
@@ -124,11 +270,15 @@ defineEmits(['update-field', 'update-step'])
   color: #34495e;
   outline: none;
   line-height: 1.6;
+  cursor: text;
+  min-height: 1.6em;
 }
 
 .edit-content:empty:before {
-  content: attr(placeholder);
+  content: attr(data-placeholder);
   color: #94a3b8;
+  pointer-events: none;
+  cursor: text;
 }
 
 .steps {
@@ -181,12 +331,16 @@ defineEmits(['update-field', 'update-step'])
   font-weight: 600;
   outline: none;
   color: #1e3c5c;
+  cursor: text;
+  min-height: 1.5em;
 }
 
 .step-title:empty:before {
-  content: attr(placeholder);
+  content: attr(data-placeholder);
   color: #94a3b8;
   font-weight: normal;
+  pointer-events: none;
+  cursor: text;
 }
 
 .step-desc {
@@ -194,11 +348,15 @@ defineEmits(['update-field', 'update-step'])
   color: #4a5568;
   outline: none;
   line-height: 1.6;
+  cursor: text;
+  min-height: 1.6em;
 }
 
 .step-desc:empty:before {
-  content: attr(placeholder);
+  content: attr(data-placeholder);
   color: #94a3b8;
+  pointer-events: none;
+  cursor: text;
 }
 
 .slide-image {
@@ -219,13 +377,6 @@ defineEmits(['update-field', 'update-step'])
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-[contenteditable=true]:empty:before {
-  content: attr(placeholder);
-  color: #94a3b8;
-  pointer-events: none;
-  display: block;
 }
 
 /* 响应式 */

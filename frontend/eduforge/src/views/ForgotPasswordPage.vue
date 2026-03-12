@@ -177,7 +177,7 @@ const messageType = ref<'success' | 'error' | ''>('')
 // ==================== 验证码发送状态 ====================
 const codeSent = ref(false)
 const codeCountdown = ref(0)
-let countdownTimer: number | null = null
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 // ==================== 图形验证码（模拟数据，对接后端后替换） ====================
 const captchaImageUrl = ref('')
@@ -191,7 +191,7 @@ const pupilTransformLeft = ref('translate(-50%, -50%)')
 const pupilTransformRight = ref('translate(-50%, -50%)')
 const mousePosition = ref({ x: 0, y: 0 })
 const isMouseMoving = ref(false)
-let mouseMoveTimer: number | null = null
+let mouseMoveTimer: ReturnType<typeof setTimeout> | null = null
 
 // ==================== 计算属性 ====================
 const canSendCode = computed(() => {

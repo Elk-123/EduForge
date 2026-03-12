@@ -252,9 +252,10 @@ import axios from 'axios'
 const router = useRouter()
 const activeBlock = ref<number | null>(null)
 const inputValue = ref('')
-const selectedStyle = ref('默认风格')
+// 移除未使用的变量，或者注释掉
+// const selectedStyle = ref('默认风格')
 const showOutline = ref(false)
-const customText = ref('')
+// const customText = ref('') // 移除未使用的变量
 const cardStyle = ref('简约')
 const isLoading = ref(false)
 const isAddingCard = ref(false)
@@ -725,9 +726,12 @@ const handleSend = async () => {
       language: selectedLanguage.value
     })
 
-    if (response.data && response.data.outline) {
+    // 使用类型断言解决 TypeScript 错误
+    const responseData = response.data as any
+
+    if (responseData && responseData.outline) {
       // 使用后端返回的数据
-      outlineItems.value = response.data.outline
+      outlineItems.value = responseData.outline
     } else {
       // 如果API返回空，使用前端生成
       outlineItems.value = generateOutlineByCount(cardCount.value, activeBlock.value)
@@ -930,8 +934,11 @@ const handleAddCard = async () => {
       context: inputValue.value
     })
 
-    if (response.data && response.data.card) {
-      outlineItems.value.push(response.data.card)
+    // 使用类型断言解决 TypeScript 错误
+    const responseData = response.data as any
+
+    if (responseData && responseData.card) {
+      outlineItems.value.push(responseData.card)
     } else {
       outlineItems.value.push({
         title: activeBlock.value === 1 ? '新卡片' : '新章节',
