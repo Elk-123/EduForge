@@ -402,8 +402,8 @@ def fill_four_column_slide(slide, data):
                 break
         
         # 四列标题和内容
-        col_titles = [13, 15, 17, 19]  # 四列标题
-        col_contents = [14, 16, 18, 20]  # 四列内容
+        col_titles = [13, 14, 15, 16]  # 四列标题
+        col_contents = [17, 18, 19, 20]  # 四列内容
         
         for i in range(4):
             # 列标题
@@ -490,7 +490,7 @@ def fill_title_content_slide(slide, data):
         # 标题 (idx=13)
         if "title" in data:
             for placeholder in slide.placeholders:
-                if placeholder.placeholder_format.idx == 13:
+                if placeholder.placeholder_format.idx == 0:
                     placeholder.text = data["title"]
                     for paragraph in placeholder.text_frame.paragraphs:
                         paragraph.font.size = Pt(32)
@@ -502,7 +502,7 @@ def fill_title_content_slide(slide, data):
         # 内容 (idx=14) - 多个项目
         if "items" in data:
             for placeholder in slide.placeholders:
-                if placeholder.placeholder_format.idx == 14:
+                if placeholder.placeholder_format.idx == 13:
                     tf = placeholder.text_frame
                     tf.clear()
                     
@@ -555,12 +555,13 @@ TYPE_TO_HANDLER = {
     "title_content": fill_title_content_slide
 }
 
+# ==================== PPT渲染器类 ====================
 class PPTRenderer:
     """PPT渲染器类，用于FastAPI后台任务"""
     
     def __init__(self, template_path=None):
         """初始化渲染器，可以指定模板路径"""
-        self.template_path = template_path or "C:/Users/lenovo/EduForge/backend/services/main.pptx"
+        self.template_path = template_path or os.path.join(os.path.dirname(__file__), "main.pptx")
     
     def render(self, dsl_data, output_path):
         """
