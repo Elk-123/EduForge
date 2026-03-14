@@ -37,7 +37,16 @@ class DifyWorkflowClient:
         # 优先从 outputs 取 ppt_content，如果没有则尝试解析 answer 里的 JSON
         final_dsl = outputs.get("ppt_content")
         raw_answer = resp_data.get("answer", "")
-        
+        print(f"\n🚀 [Dify Output] Stage: {stage}")
+        # print(f"📝 Message: {clean_message[:50]}...")
+        print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
+        # 返回统一的业务对象
+        print("\n" + "="*60)
+        print("📊 提取出的 DSL JSON:")
+        print("="*60)
+        print(json.dumps(final_dsl, ensure_ascii=False, indent=2))
+        print("="*60)
+        print()
         # 如果 outputs 里没拿到，就从 answer 字符串里正则抠 JSON
         if not final_dsl and raw_answer:
             try:
@@ -50,7 +59,7 @@ class DifyWorkflowClient:
                 final_dsl = json.loads(json_str.strip())
             except Exception:
                 final_dsl = None
-
+                
         # 2. 提取文本回复内容
         clean_message = outputs.get("text_reply", raw_answer if not final_dsl else "PPT 数据已准备就绪")
 
@@ -58,8 +67,13 @@ class DifyWorkflowClient:
         print(f"\n🚀 [Dify Output] Stage: {stage}")
         print(f"📝 Message: {clean_message[:50]}...")
         print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
-
         # 返回统一的业务对象
+        print("\n" + "="*60)
+        print("📊 提取出的 DSL JSON:")
+        print("="*60)
+        print(json.dumps(final_dsl, ensure_ascii=False, indent=2))
+        print("="*60)
+        print()
         return {
             "message": clean_message,
             "dsl": final_dsl,
