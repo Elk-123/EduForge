@@ -16,8 +16,16 @@ class DifyWorkflowClient:
         self, subject: str, stage: str = "outline", refined_outline: str = "", user_id: str = "eduforge_user"
     ):
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        inputs = {
+            "subject": subject,
+            "stage": stage
+        }
+        # 只有generate阶段才需要传入refined_outline
+        if stage == "generate" and refined_outline:
+            inputs["refined_outline"] = refined_outline
+            print(refined_outline)
         payload = {
-            "inputs": {"subject": subject, "stage": stage, "refined_outline": refined_outline},
+            "inputs": inputs,
             "query": f"开始生成{subject}的{stage}",
             "response_mode": "blocking", # 🌟 修改点：由 streaming 改为 blocking
             "user": user_id
@@ -35,19 +43,34 @@ class DifyWorkflowClient:
         outputs = resp_data.get("metadata", {}) or resp_data.get("data", {}).get("outputs", {})
         
         # 优先从 outputs 取 ppt_content，如果没有则尝试解析 answer 里的 JSON
-        final_dsl = outputs.get("ppt_content")
         raw_answer = resp_data.get("answer", "")
-        print(f"\n🚀 [Dify Output] Stage: {stage}")
+        final_dsl = None
+        # print (raw_answer)
+        # print(f"\n🚀 [Dify Output] Stage: {stage}")
         # print(f"📝 Message: {clean_message[:50]}...")
-        print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
+        # print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
         # 返回统一的业务对象
-        print("\n" + "="*60)
-        print("📊 提取出的 DSL JSON:")
-        print("="*60)
-        print(json.dumps(final_dsl, ensure_ascii=False, indent=2))
-        print("="*60)
-        print()
         # 如果 outputs 里没拿到，就从 answer 字符串里正则抠 JSON
+        if stage == "outline":
+            # 大纲阶段：尝试多个可能的字段名
+            final_dsl = (
+                outputs.get("outline_content") or 
+                outputs.get("outline") or 
+                outputs.get("dsl")
+            )
+            default_message = "大纲已生成，请编辑后提交生成PPT"
+            field_used = "outline_content/outline"
+        else:  # generate阶段
+            # 🌟 修改4: generate阶段从ppt_outline字段获取（匹配Dify设置）
+            final_dsl = (
+                outputs.get("ppt_outline") or  # 优先使用ppt_outline
+                outputs.get("ppt_content") or 
+                outputs.get("presentation") or 
+                outputs.get("dsl")
+            )
+            print(subject)
+            default_message = "PPT生成成功，可下载"
+            field_used = "ppt_outline/ppt_content"
         if not final_dsl and raw_answer:
             try:
                 if "```json" in raw_answer:
@@ -59,22 +82,21 @@ class DifyWorkflowClient:
                 final_dsl = json.loads(json_str.strip())
             except Exception:
                 final_dsl = None
-                
+        print(final_dsl)
         # 2. 提取文本回复内容
-        clean_message = outputs.get("text_reply", raw_answer if not final_dsl else "PPT 数据已准备就绪")
-
+        if final_dsl:
+            clean_message = outputs.get("text_reply", default_message)
+            # 如果返回的dsl是列表，显示页数
+            if isinstance(final_dsl, list):
+                clean_message += f" (共{len(final_dsl)}页)"
+            elif isinstance(final_dsl, dict) and final_dsl.get("pages"):
+                clean_message += f" (共{len(final_dsl['pages'])}页)"
+        else:
+            clean_message = outputs.get("text_reply", raw_answer if raw_answer else f"{stage}生成失败")
         # --- 终端打印调试 ---
-        print(f"\n🚀 [Dify Output] Stage: {stage}")
-        print(f"📝 Message: {clean_message[:50]}...")
-        print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
         # 返回统一的业务对象
-        print("\n" + "="*60)
-        print("📊 提取出的 DSL JSON:")
-        print("="*60)
-        print(json.dumps(final_dsl, ensure_ascii=False, indent=2))
-        print("="*60)
-        print()
         return {
+            "stage":stage,
             "message": clean_message,
             "dsl": final_dsl,
             "is_complete": True if final_dsl else False,

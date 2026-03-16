@@ -35,7 +35,7 @@ UPLOAD_DIR = "temp_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 挂载认证路由 (包含 /api/auth/register 和 /api/auth/login)
-app.include_router(auth.router, prefix="/api/auth") # 建议统一前缀
+app.include_router(auth.router)
 app.include_router(generate.router, prefix="/api/v1") # 🌟 2. 挂载生成路由
 
 # ==================== Gamma 核心交互接口 ====================
@@ -53,7 +53,7 @@ async def upload_file(
 # ==================== 后台与下载 ====================
 
 @app.get("/api/download/{session_id}")
-async def download_file(session_id: str, token: str = Depends(oauth2_scheme)):
+async def download_file(session_id: str):
     """前端点击下载实体 PPTX"""
     filename = f"output_{session_id}.pptx"
     file_path = os.path.join(UPLOAD_DIR, filename)

@@ -716,6 +716,7 @@ const handleExampleClick = (example: string) => {
 }
 
 // 发送按钮 - 生成大纲
+
 const handleSend = async () => {
   if (!inputValue.value.trim()) {
     console.log('发送内容为空，不执行');
@@ -730,35 +731,38 @@ const handleSend = async () => {
   isLoading.value = true
 
   try {
-    // 调用后端API生成大纲
-    const response = await axios.post(`${API_BASE_URL}/generate-outline`, {
-      prompt: inputValue.value,
-      type: activeBlock.value === 1 ? 'presentation' : 'document',
-      cardCount: cardCount.value,
-      language: selectedLanguage.value
+    // 1. 严格按照后端 GenerateRequest 模型传参
+    const response = await axios.post(`${API_BASE_URL}/generate-content`, {
+      subject: inputValue.value, // 只传用户输入的文本
+      stage: 'outline',          // 明确告诉后端处于大纲阶段
+      mode: 'dify'               // 使用 dify 模式
     })
 
     const responseData = response.data as any
 
-    if (responseData && responseData.outline) {
-      // 使用后端返回的数据
-      outlineItems.value = responseData.outline
+    // 2. 直接读取后端解析好的 dsl 字段
+    if (responseData && responseData.dsl) {
+      // 兼容 Dify 返回的是数组或者是带有 outline 属性的对象
+      outlineItems.value = Array.isArray(responseData.dsl) 
+        ? responseData.dsl 
+        : (responseData.dsl.outline || responseData.dsl.items || responseData.dsl);
     } else {
-      // 如果API返回空，使用前端生成
+      // 兜底机制：如果没有 dsl，使用前端模拟大纲
+      console.log('未检测到有效的后端大纲数据，使用备用大纲');
       outlineItems.value = generateOutlineByCount(cardCount.value, activeBlock.value)
     }
 
-    // 设置主标题和副标题
-    mainTitle.value = outlineTitle.value
-    subtitle.value = outlineSubtitle.value
+    // 3. 设置界面标题
+    mainTitle.value = inputValue.value;
+    subtitle.value = activeBlock.value === 1 ? '演示文稿大纲' : '文档大纲';
     
     showOutline.value = true
   } catch (error) {
-    console.error('生成大纲失败:', error)
-    // 如果API调用失败，使用前端生成
+    console.error('调用生成接口失败:', error)
+    // 接口报错时兜底显示
     outlineItems.value = generateOutlineByCount(cardCount.value, activeBlock.value)
-    mainTitle.value = outlineTitle.value
-    subtitle.value = outlineSubtitle.value
+    mainTitle.value = inputValue.value
+    subtitle.value = '生成失败，显示备用演示大纲'
     showOutline.value = true
   } finally {
     isLoading.value = false

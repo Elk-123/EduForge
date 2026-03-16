@@ -28,18 +28,26 @@ async def generate_content(req: GenerateRequest):
             refined_outline=req.refined_outline
         )
         if result.get('dsl'):
-            UPLOAD_DIR = "temp_uploads"
-            output_filename =f"output_{session_id}.pptx"
-            output_path = os.path.join(UPLOAD_DIR, output_filename)
-            ppt_renderer = PPTRenderer()
-            ppt_renderer.render(result['dsl'], output_path)
-            download_url = f"/api/download/{session_id}"
-            print(f"PPT渲染完成，下载链接: {download_url}.{output_path}")
-            return{
-                **result,
-                "session_id": session_id,
-                "download_url": download_url
-            }
+            if req.stage == "outline":
+            # outline阶段：直接返回
+                print(f"📋 Outline阶段完成，生成大纲，session_id: {session_id}")
+                return {
+                    **result,
+                    "session_id": session_id
+                }
+            else:
+                UPLOAD_DIR = "temp_uploads"
+                output_filename =f"output_{session_id}.pptx"
+                output_path = os.path.join(UPLOAD_DIR, output_filename)
+                ppt_renderer = PPTRenderer()
+                ppt_renderer.render(result['dsl'], output_path)
+                download_url = f"/api/download/{session_id}"
+                print(f"PPT渲染完成，下载链接: {download_url}.{output_path}")
+                return{
+                    **result,
+                    "session_id": session_id,
+                    "download_url": download_url
+                }
         else:
             return result
     else:
@@ -52,6 +60,5 @@ class LessonPlanRequest(BaseModel):
 
 @router.post("/generate-lesson-plan")
 async def generate_lesson_plan(req: LessonPlanRequest):
-    # 🌟 修改点：改为调用 lp_service 的同步/完整传输接口 (假设已在 service 中实现 get_lesson_plan)
     result = await lp_service.get_lesson_plan(req.subject)
     return result

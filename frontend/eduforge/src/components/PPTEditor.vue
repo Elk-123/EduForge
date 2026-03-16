@@ -76,6 +76,23 @@
         </div>
       </div>
     </div>
+    <div class="action-buttons" style="position: fixed; bottom: 30px; right: 30px; display: flex; gap: 10px; z-index: 1000;">
+  <button 
+    @click="handleGeneratePPT" 
+    style="background: #ff6b6b; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"
+  >
+    ✨ 生成PPT
+  </button>
+  
+  <a 
+    v-if="downloadUrl" 
+    :href="downloadUrl" 
+    target="_blank"
+    style="background: rgb(11, 167, 175); color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 14px;"
+  >
+    下载PPT
+  </a>
+</div>
   </div>
 </template>
 
@@ -87,7 +104,7 @@ import Canvas from './Canvas.vue'
 import Toolbar from './Toolbar.vue'
 import SideEditor from './SideEditor.vue'
 import SearchPanel from './SearchPanel.vue'
-
+import axios from 'axios'
 const route = useRoute()
 const slides = ref([])
 const currentSlide = ref(null)
@@ -95,7 +112,10 @@ const fontSize = ref(16)
 const showPreview = ref(false)
 const showSearch = ref(false)
 const history = ref([])
+const API_BASE_URL = 'http://localhost:8000/api/v1'
+const downloadUrl = ref('')  // 只存下载链接
 const historyIndex = ref(-1)
+
 
 // 初始化数据
 onMounted(() => {
@@ -339,6 +359,41 @@ const updateImage = (image) => {
     currentSlide.value.image = image
     saveToHistory()
     alert('图片已添加')
+  }
+}
+const handleGeneratePPT = async () => {
+  try {
+    alert('正在生成PPT，请稍候...')
+    
+    // 从路由参数获取大纲数据
+    const outlineParam = route.query.outline
+    if (!outlineParam) {
+      alert('未找到大纲数据')
+      return
+    }
+    
+    const outlineData = JSON.parse(outlineParam)
+    
+    const response = await axios.post(`${API_BASE_URL}/generate-content`, {
+      subject: outlineData.title || 'PPT生成',
+      stage: 'generate',
+      refined_outline: JSON.stringify(outlineData.items),  // 使用传入的 items
+      mode: 'dify'
+    })
+    
+    console.log('后端返回:', response.data)
+    
+    // 只处理下载链接
+    if (response.data.download_url) {
+      downloadUrl.value = response.data.download_url
+      alert('PPT生成成功！可以点击下载按钮')
+    } else {
+      alert('生成成功，但未获取到下载链接')
+    }
+    
+  } catch (error) {
+    console.error('生成PPT失败:', error)
+    alert('生成PPT失败：' + (error.response?.data?.message || error.message))
   }
 }
 </script>

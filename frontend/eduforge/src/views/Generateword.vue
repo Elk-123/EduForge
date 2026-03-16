@@ -194,13 +194,47 @@ const handleExampleClick = (example: string) => {
   inputValue.value = example
 }
 
-const handleSend = () => {
-  if (inputValue.value.trim()) {
-    console.log('发送内容:', inputValue.value)
-    // TODO: 调用后端API发送内容
-    alert(`生成中: ${inputValue.value}`)
+const handleSend = async () => {
+  if (!inputValue.value.trim()) return;
+
+  const subject = inputValue.value;
+  console.log('开始生成教案:', subject);
+  
+
+  try {
+    // 2. 发起请求
+    const response = await fetch('http://your-api-url/api/generate-lesson-plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subject: subject,
+        stage: "lesson_plan"
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      // 3. 处理成功逻辑
+      console.log('生成成功:', result);
+      
+      // 你可以在这里跳转页面，或者把结果存入 store 显示在当前页
+      // result.markdown -> 用于展示文本
+      // result.data -> 用于展示结构化表格
+      // result.download_url -> 用于提供下载按钮
+      
+      alert(`教案《${result.title}》生成成功！`);
+    } else {
+      alert(`生成失败: ${result.message}`);
+    }
+  } catch (error) {
+    console.error('API调用出错:', error);
+    alert('网络错误，请稍后再试');
+  } finally {
   }
-}
+};
 
 const handleRefreshExample = () => {
   const exampleGroups: string[][] = [

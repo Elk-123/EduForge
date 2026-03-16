@@ -195,37 +195,57 @@ onUnmounted(() => {
 })
 
 // 注册逻辑
+// 注册逻辑
 const handleRegister = async (): Promise<void> => {
+  // 1. 前端基础校验
   if (!username.value || !email.value || !password.value || !confirmPassword.value) {
     alert('请填写所有字段')
     return
   }
-  
   if (password.value !== confirmPassword.value) {
     alert('两次输入的密码不一致')
     return
   }
-  
   if (password.value.length < 6) {
     alert('密码长度至少为6位')
     return
   }
-  
   if (!email.value.includes('@') || !email.value.includes('.')) {
     alert('请输入有效的邮箱地址')
     return
   }
   
   isRegistering.value = true
+  
   try {
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // 2. 发送真实的网络请求到 FastAPI 后端
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username.value,
+        email: email.value, // 发送邮箱
+        password: password.value
+      })
+    })
+
+    const data = await response.json()
+
+    // 3. 处理后端返回的结果
+    if (!response.ok) {
+      // 获取后端抛出的 HTTPException 的 detail 字段
+      throw new Error(data.detail || '注册失败，请重试')
+    }
     
-    // 模拟注册成功
+    // 注册成功
     alert('注册成功！请登录')
-    router.push('/')
+    router.push('/') // 跳转到登录页
     
-  } catch (error) {
-    alert('注册失败，请重试')
+  } catch (error: any) {
+    // 捕获并提示错误（如：用户名已被注册）
+    alert(error.message)
   } finally {
     isRegistering.value = false
   }

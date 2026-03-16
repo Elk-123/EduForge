@@ -177,19 +177,35 @@ const handleLogin = async (): Promise<void> => {
     alert('请输入账号和密码')
     return
   }
+
   isLoggingIn.value = true
+
   try {
-    await new Promise(resolve => setTimeout(resolve, 800))
-    const user = validUsers.find(
-      u => u.username === username.value && u.password === password.value
-    )
-    if (user) {
-      localStorage.setItem('isLoggedIn', 'true')
-      localStorage.setItem('username', username.value)
-      router.push('/home')
-    } else {
-      alert('用户名或密码错误')
+    const formData = new URLSearchParams()
+    formData.append('username', username.value)
+    formData.append('password', password.value)
+
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'  // 🌟 必须这个类型
+      },
+      body: formData
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      alert(error.detail || '登录失败')
+      return
     }
+
+    const data = await response.json()
+    // 保存 token 到 localStorage
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('token_type', data.token_type)
+    localStorage.setItem('username', username.value)
+
+    router.push('/home')
   } catch (error) {
     alert('登录失败，请重试')
   } finally {
