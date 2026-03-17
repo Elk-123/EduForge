@@ -1,3 +1,4 @@
+# backend/routers/auth.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db, User
@@ -9,6 +10,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 class AuthSchema(BaseModel):
     username: str
+    email: str
     password: str
 
 @router.post("/register")
@@ -17,9 +19,12 @@ def register(data: AuthSchema, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="用户名已被注册")
     
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="该邮箱已被注册")
     # 使用我们的新原生哈希函数
     new_user = User(
         username=data.username, 
+        email=data.email,
         hashed_password=get_password_hash(data.password)
     )
     db.add(new_user)

@@ -9,7 +9,7 @@ from typing import Optional
 
 # 1. 导入你已经创建好的数据库和认证模块
 from database import engine, Base
-from routers import auth, generate  # 🌟 1. 导入 generate 路由
+from routers import auth, generate, password_reset 
 from services.ppt_renderer import PPTRenderer 
 from schemas.dsl import PPTDocument
 from services.lesson_renderer import LessonRenderer
@@ -36,6 +36,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 挂载认证路由 (包含 /api/auth/register 和 /api/auth/login)
 app.include_router(auth.router)
+app.include_router(password_reset.router) # 🌟 1. 挂载密码重置路由
 app.include_router(generate.router, prefix="/api/v1") # 🌟 2. 挂载生成路由
 
 # ==================== Gamma 核心交互接口 ====================

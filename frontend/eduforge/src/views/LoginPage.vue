@@ -165,12 +165,6 @@ onUnmounted(() => {
   }
 })
 
-// 登录逻辑
-const validUsers = [
-  { username: 'admin', password: 'admin123' },
-  { username: 'user', password: 'user123' },
-  { username: 'test', password: 'test123' }
-]
 
 const handleLogin = async (): Promise<void> => {
   if (!username.value || !password.value) {

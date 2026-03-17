@@ -288,48 +288,31 @@ const generateCaptchaSVG = (text: string) => {
  *   }
  * }
  */
-const sendVerificationCode = async () => {
-  if (!canSendCode.value) return
-  
-  // 验证图形验证码不能为空
-  if (!imageCaptcha.value) {
-    messageType.value = 'error'
-    message.value = '请输入图形验证码'
-    return
+ const sendVerificationCode = async () => {
+  // 只检查邮箱格式是否正确
+  if (!email.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+    messageType.value = 'error';
+    message.value = '请输入有效的邮箱地址';
+    return;
   }
   
-  message.value = ''
-  messageType.value = ''
+  message.value = '正在发送...';
+  messageType.value = '';
   
   try {
-    // TODO: 替换为真实后端接口
-    /*
     const response = await fetch('/api/send-email-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: email.value,
-        captcha: imageCaptcha.value,
-        captchaKey: captchaKey.value
+        email: email.value
+        // 删除了 captcha 和 captchaKey
       })
     })
     
-    const data = await response.json()
-    
-    if (!response.ok) {
-      throw new Error(data.message || '发送失败')
-    }
-    */
-    
-    // 模拟发送成功（开发测试用）
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // 模拟图形验证码验证
-    if (imageCaptcha.value !== correctImageCaptcha.value) {
-      throw new Error('图形验证码错误')
-    }
-    
-    // 发送成功，开始倒计时
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.detail || '发送失败')
+
+    // 发送成功，进入倒计时
     codeSent.value = true
     codeCountdown.value = 60
     
@@ -338,44 +321,19 @@ const sendVerificationCode = async () => {
       codeCountdown.value -= 1
       if (codeCountdown.value <= 0) {
         codeSent.value = false
-        if (countdownTimer) {
-          clearInterval(countdownTimer)
-          countdownTimer = null
-        }
+        clearInterval(countdownTimer!)
       }
     }, 1000)
-    
+
     messageType.value = 'success'
-    message.value = '验证码已发送到邮箱'
-    
-    // 模拟自动填充验证码（仅开发测试用）
-    emailCode.value = '123456'
-    
+    message.value = '验证码已发送'
   } catch (error: any) {
     messageType.value = 'error'
-    message.value = error.message || '发送失败，请重试'
-    refreshCaptcha() // 失败后刷新图形验证码
+    message.value = error.message || '发送失败，请稍后重试'
   }
 }
 
 // ==================== 后端接口：验证邮箱验证码 ====================
-/**
- * 验证邮箱验证码
- * 后端接口：POST /api/verify-email-code
- * 请求体：
- * {
- *   email: string,     // 邮箱地址
- *   code: string       // 邮箱验证码
- * }
- * 响应格式：
- * {
- *   success: boolean,
- *   message: string,
- *   data?: {
- *     token: string    // 重置密码的临时token，下一步需要携带
- *   }
- * }
- */
 const verifyCode = async () => {
   if (!canVerifyCode.value) return
   
@@ -384,44 +342,41 @@ const verifyCode = async () => {
   messageType.value = ''
   
   try {
-    // TODO: 替换为真实后端接口
-    /*
+    // 1. 发起真实请求
     const response = await fetch('/api/verify-email-code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
       body: JSON.stringify({
-        email: email.value,
-        code: emailCode.value
+        email: email.value, // 对应后端的 data.email
+        code: emailCode.value // 对应后端的 data.code
       })
     })
     
-    const data = await response.json()
+    const resData = await response.json()
     
+    // 2. 处理后端抛出的 HTTPException (status_code=400)
     if (!response.ok) {
-      throw new Error(data.message || '验证失败')
+      // 后端 detail 会被封装在 message 或 detail 中，取决于你的 FastAPI 配置
+      throw new Error(resData.detail || '验证失败')
     }
     
-    // 保存重置密码的token（后续重置密码需要）
-    localStorage.setItem('resetToken', data.data.token)
-    */
-    
-    // 模拟验证（开发测试用）
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    if (emailCode.value !== '123456') {
-      throw new Error('验证码错误')
-    }
-    
-    // 模拟保存token
-    localStorage.setItem('resetToken', 'mock_reset_token_123456')
+    // 3. 验证成功：保存后端颁发的 reset_token
+    // 关键点：后端返回的是 { data: { token: "xxx" } }
+    const resetToken = resData.data.token
+    localStorage.setItem('resetToken', resetToken)
     
     messageType.value = 'success'
-    message.value = '验证成功'
+    message.value = '验证成功，请重置密码'
+    
+    // 4. 跳转到下一步（重置密码表单）
     currentStep.value = 2
     
   } catch (error: any) {
+    // 捕获网络错误或后端返回的 400 错误
     messageType.value = 'error'
-    message.value = error.message || '验证失败'
+    message.value = error.message || '服务器连接失败'
   } finally {
     isVerifying.value = false
   }
@@ -444,7 +399,7 @@ const verifyCode = async () => {
  *   message: string
  * }
  */
-const resetPassword = async () => {
+ const resetPassword = async () => {
   if (!canResetPassword.value) return
   
   isResetting.value = true
@@ -452,44 +407,45 @@ const resetPassword = async () => {
   messageType.value = ''
   
   try {
-    // 获取之前保存的token
+    // 1. 获取 Step 2 存入的临时 Token
     const resetToken = localStorage.getItem('resetToken')
     
     if (!resetToken) {
-      throw new Error('验证信息已过期，请重新开始')
+      throw new Error('验证信息已失效，请重新获取验证码')
     }
     
-    // TODO: 替换为真实后端接口
-    /*
+    // 2. 发起重置密码请求
     const response = await fetch('/api/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: email.value,
+        email: email.value,           // 必须与 Token 中的 sub 一致
         password: newPassword.value,
         confirmPassword: confirmPassword.value,
-        token: resetToken
+        token: resetToken             // 将 Token 放在 Body 中传给后端
       })
     })
     
-    const data = await response.json()
+    const resData = await response.json()
     
+    // 3. 处理后端抛出的错误 (400, 401, 404)
     if (!response.ok) {
-      throw new Error(data.message || '重置失败')
+      // 如果后端返回 401，说明 Token 过期或非法
+      if (response.status === 401) {
+        localStorage.removeItem('resetToken') // 清理无效 Token
+      }
+      throw new Error(resData.detail || '重置失败')
     }
-    */
     
-    // 模拟重置成功（开发测试用）
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 清除保存的token
+    // 4. 重置成功：清理现场
     localStorage.removeItem('resetToken')
     
     messageType.value = 'success'
     message.value = '密码重置成功，即将跳转到登录页'
     
+    // 5. 延迟跳转
     setTimeout(() => {
-      router.push('/')
+      router.push('/login') 
     }, 2000)
     
   } catch (error: any) {

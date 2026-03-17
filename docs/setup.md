@@ -25,3 +25,4 @@ npm install
 npm run dev
 ---
 pip install langchain-community faiss-cpu sentence-transformers pymupdf
+docker exec -it eduforge_db psql -U postgres -d eduforge

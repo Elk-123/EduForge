@@ -14,6 +14,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)  # <-- 新增这一行
     hashed_password = Column(String)
 
 # 获取数据库连接的工具函数
