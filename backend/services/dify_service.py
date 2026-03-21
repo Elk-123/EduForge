@@ -40,31 +40,37 @@ class DifyWorkflowClient:
         safe_subject = str(subject or "未命名主题")
         safe_stage = str(stage or "outline")
         safe_outline = str(refined_outline or "")
+        # backend/services/dify_service.py
+
+# ... 之前的逻辑 ...
 
         inputs = {
             "subject": safe_subject,
             "stage": safe_stage,
-            "refined_outline": safe_outline # 🌟 始终携带，防止 Dify 变量校验失败
+            "refined_outline": safe_outline,
+            "text": safe_subject,     # 👈 很多默认节点会找这个变量
+            "query": safe_subject,    # 👈 兼容对话型应用
         }
 
         payload = {
             "inputs": inputs,
-            "query": safe_subject, # 🌟 确保不为 None
+            "query": safe_subject,    # 👈 确保 query 字段不为空
             "response_mode": "blocking",
             "user": user_id
         }
-        # 🌟 如果有本地文件，先上传并加入 payload
+
+        # 处理文件类型
         if file_path and os.path.exists(file_path):
             file_id = await self._upload_file(file_path, current_key)
             ext = os.path.splitext(file_path)[1].lower()
-            # 根据后缀判断类型
-            file_type = "document" if ext == ".pdf" else "image"
+
+            # 🌟 核心点：确保如果是图片，type 必须是 image
+            file_type = "image" if ext in [".png", ".jpg", ".jpeg"] else "document"
             payload["files"] = [{
                 "type": file_type,
                 "transfer_method": "local_file",
                 "upload_file_id": file_id
             }]
-
         timeout = httpx.Timeout(120.0, connect=60.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(f"{self.base_url}/chat-messages", headers=headers, json=payload)
