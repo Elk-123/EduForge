@@ -8,97 +8,95 @@ load_dotenv()
 
 class DifyWorkflowClient:
     def __init__(self):
-        self.api_key = os.getenv("DIFY_API_KEY")
-        self.base_url = "https://api.dify.ai/v1/chat-messages"
+        self.ppt_api_key = os.getenv("DIFY_API_KEY")
+        self.lesson_api_key = os.getenv("DIFY_API_KEY_LESSON")
+        self.base_url = "http://127.0.0.1/v1"
 
-    # 🌟 修改点：方法名改为 get_eduforge_content，移除 yield，改为 return
+    # --- 第一步：上传文件到 Dify 获取 file_id ---
+    async def _upload_file(self, file_path: str, api_key: str):
+        url = f"{self.base_url}/files/upload"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        
+        # 自动识别文件类型
+        ext = os.path.splitext(file_path)[1].lower()
+        mime_type = "application/pdf" if ext == ".pdf" else "image/jpeg"
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            with open(file_path, "rb") as f:
+                files = {"file": (os.path.basename(file_path), f, mime_type)}
+                response = await client.post(url, headers=headers, files=files)
+                response.raise_for_status()
+                return response.json().get("id")
+
+    # --- 第二步：发送消息并关联文件 ---
     async def get_eduforge_content(
-        self, subject: str, stage: str = "outline", refined_outline: str = "", user_id: str = "eduforge_user"
+        self, subject: str, stage: str = "outline", 
+        refined_outline: str = "", file_path: str = None, user_id: str = "eduforge_user"
     ):
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        current_key = self.lesson_api_key if stage == "lesson_plan" else self.ppt_api_key
+        headers = {"Authorization": f"Bearer {current_key}", "Content-Type": "application/json"}
+
+        # 🌟 核心修复：无论什么 stage，都保证这三个核心变量不为 None 且都存在
+        safe_subject = str(subject or "未命名主题")
+        safe_stage = str(stage or "outline")
+        safe_outline = str(refined_outline or "")
+
         inputs = {
-            "subject": subject,
-            "stage": stage
+            "subject": safe_subject,
+            "stage": safe_stage,
+            "refined_outline": safe_outline # 🌟 始终携带，防止 Dify 变量校验失败
         }
-        # 只有generate阶段才需要传入refined_outline
-        if stage == "generate" and refined_outline:
-            inputs["refined_outline"] = refined_outline
-            print(refined_outline)
+
         payload = {
             "inputs": inputs,
-            "query": f"开始生成{subject}的{stage}",
-            "response_mode": "blocking", # 🌟 修改点：由 streaming 改为 blocking
+            "query": safe_subject, # 🌟 确保不为 None
+            "response_mode": "blocking",
             "user": user_id
         }
-        
+        # 🌟 如果有本地文件，先上传并加入 payload
+        if file_path and os.path.exists(file_path):
+            file_id = await self._upload_file(file_path, current_key)
+            ext = os.path.splitext(file_path)[1].lower()
+            # 根据后缀判断类型
+            file_type = "document" if ext == ".pdf" else "image"
+            payload["files"] = [{
+                "type": file_type,
+                "transfer_method": "local_file",
+                "upload_file_id": file_id
+            }]
+
         timeout = httpx.Timeout(120.0, connect=60.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
-            # 🌟 修改点：直接发送 POST 请求并解析完整的 JSON
-            response = await client.post(self.base_url, headers=headers, json=payload)
+            response = await client.post(f"{self.base_url}/chat-messages", headers=headers, json=payload)
+            if response.status_code == 400:
+                print(f"❌ Dify 400 Error Detail: {response.text}")
             response.raise_for_status()
             resp_data = response.json()
-        # --- 原 process_chat 的解析逻辑开始 ---
-        
-        # 1. 提取输出字段 (兼容不同工作流配置)
-        outputs = resp_data.get("metadata", {}) or resp_data.get("data", {}).get("outputs", {})
-        
-        # 优先从 outputs 取 ppt_content，如果没有则尝试解析 answer 里的 JSON
+
+        # --- 解析逻辑 ---
+        outputs = resp_data.get("data", {}).get("outputs", {})
         raw_answer = resp_data.get("answer", "")
-        final_dsl = None
-        # print (raw_answer)
-        # print(f"\n🚀 [Dify Output] Stage: {stage}")
-        # print(f"📝 Message: {clean_message[:50]}...")
-        # print(f"📊 DSL Generated: {'Yes' if final_dsl else 'No'}")
-        # 返回统一的业务对象
-        # 如果 outputs 里没拿到，就从 answer 字符串里正则抠 JSON
-        if stage == "outline":
-            # 大纲阶段：尝试多个可能的字段名
-            final_dsl = (
-                outputs.get("outline_content") or 
-                outputs.get("outline") or 
-                outputs.get("dsl")
-            )
-            default_message = "大纲已生成，请编辑后提交生成PPT"
-            field_used = "outline_content/outline"
-        else:  # generate阶段
-            # 🌟 修改4: generate阶段从ppt_outline字段获取（匹配Dify设置）
-            final_dsl = (
-                outputs.get("ppt_outline") or  # 优先使用ppt_outline
-                outputs.get("ppt_content") or 
-                outputs.get("presentation") or 
-                outputs.get("dsl")
-            )
-            print(subject)
-            default_message = "PPT生成成功，可下载"
-            field_used = "ppt_outline/ppt_content"
-        if not final_dsl and raw_answer:
-            try:
-                if "```json" in raw_answer:
-                    json_str = re.search(r'```json\s*(.*?)\s*```', raw_answer, re.DOTALL).group(1)
-                elif "```" in raw_answer:
-                    json_str = re.search(r'```\s*(.*?)\s*```', raw_answer, re.DOTALL).group(1)
-                else:
-                    json_str = raw_answer
-                final_dsl = json.loads(json_str.strip())
-            except Exception:
-                final_dsl = None
-        print(final_dsl)
-        # 2. 提取文本回复内容
-        if final_dsl:
-            clean_message = outputs.get("text_reply", default_message)
-            # 如果返回的dsl是列表，显示页数
-            if isinstance(final_dsl, list):
-                clean_message += f" (共{len(final_dsl)}页)"
-            elif isinstance(final_dsl, dict) and final_dsl.get("pages"):
-                clean_message += f" (共{len(final_dsl['pages'])}页)"
-        else:
-            clean_message = outputs.get("text_reply", raw_answer if raw_answer else f"{stage}生成失败")
-        # --- 终端打印调试 ---
-        # 返回统一的业务对象
+        
+        # 提取 Word 下载链接（针对教案插件）
+        dify_file_url = None
+        file_match = re.search(r'\[.*?\.docx\]\((.*?)\)', raw_answer)
+        if file_match:
+            dify_file_url = file_match.group(1)
+            if dify_file_url.startswith('/'):
+                dify_file_url = f"http://127.0.0.1{dify_file_url}"
+        
+        clean_markdown = re.sub(r'\[.*?\.docx\]\(.*?\)\n?', '', raw_answer).strip()
+
+        # 处理 DSL (PPT 或教案文本)
+        final_dsl = clean_markdown if stage == "lesson_plan" else (
+            outputs.get("ppt_outline") or outputs.get("ppt_content") or outputs.get("dsl")
+        )
+
         return {
-            "stage":stage,
-            "message": clean_message,
+            "stage": stage,
+            "message": outputs.get("text_reply", "生成成功"),
             "dsl": final_dsl,
-            "is_complete": True if final_dsl else False,
-            "raw_response": resp_data  # 保留原始响应以备不时之需
+            "file_url": dify_file_url,
+            "is_complete": True if final_dsl or dify_file_url else False,
+            "raw_response": resp_data 
         }
