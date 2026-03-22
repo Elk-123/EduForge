@@ -277,11 +277,13 @@ watch(() => props.currentSlide, () => {
   flex: 1;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
-  padding: 20px;
+  padding: 16px;  /* 从 20px 改为 16px，减少内边距 */
   overflow-y: auto;
+  overflow-x: hidden;  /* 隐藏横向滚动条 */
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
-
 .side-editor-header {
   margin-bottom: 20px;
 }
@@ -292,11 +294,12 @@ watch(() => props.currentSlide, () => {
   font-weight: 600;
   margin: 0;
 }
-
 .side-editor-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;  /* 从 24px 改为 20px */
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .image-section h4,
@@ -325,13 +328,12 @@ watch(() => props.currentSlide, () => {
 
 .image-preview img {
   width: 100%;
-  height: 160px;
+  height: auto;
+  max-height: 140px;  /* 从 160px 稍微减小 */
   object-fit: cover;
   border-radius: 12px;
   margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
-
 .image-info {
   font-size: 12px;
   color: #4a5568;
@@ -401,16 +403,16 @@ watch(() => props.currentSlide, () => {
 .search-section {
   margin-bottom: 8px;
 }
-
 .search-box {
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.8);
-  border-radius: 30px;
+  border-radius: 24px;  /* 从 30px 改为 24px */
   padding: 4px 4px 4px 12px;
   border: 1px solid rgba(255, 255, 255, 0.5);
+  width: 100%;
+  box-sizing: border-box;
 }
-
 .search-icon {
   color: #94a3b8;
   font-size: 16px;
@@ -426,20 +428,26 @@ watch(() => props.currentSlide, () => {
   color: #34495e;
   outline: none;
 }
-
-.search-input::placeholder {
-  color: #94a3b8;
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 0;  /* 从 8px 改为 6px */
+  font-size: 13px;  /* 从 14px 改为 13px */
+  color: #34495e;
+  outline: none;
+  min-width: 0;
 }
 
 .search-btn {
-  padding: 6px 16px;
-  border-radius: 30px;
+  padding: 4px 12px;  /* 从 6px 16px 改为 4px 12px */
+  border-radius: 20px;  /* 从 30px 改为 20px */
   border: none;
   background: rgb(11, 167, 175);
   color: white;
-  font-size: 13px;
+  font-size: 12px;  /* 从 13px 改为 12px */
   cursor: pointer;
-  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .search-btn:hover {
@@ -460,10 +468,11 @@ watch(() => props.currentSlide, () => {
   color: #94a3b8;
 }
 
+/* 推荐配图网格 */
 .suggestion-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;  /* 从 12px 改为 10px */
 }
 
 .suggestion-item {

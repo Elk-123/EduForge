@@ -76,23 +76,6 @@
         </div>
       </div>
     </div>
-    <div class="action-buttons" style="position: fixed; bottom: 30px; right: 30px; display: flex; gap: 10px; z-index: 1000;">
-  <button 
-    @click="handleGeneratePPT" 
-    style="background: #ff6b6b; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"
-  >
-    ✨ 生成PPT
-  </button>
-  
-  <a 
-    v-if="downloadUrl" 
-    :href="downloadUrl" 
-    target="_blank"
-    style="background: rgb(11, 167, 175); color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 14px;"
-  >
-    下载PPT
-  </a>
-</div>
   </div>
 </template>
 
@@ -104,7 +87,15 @@ import Canvas from './Canvas.vue'
 import Toolbar from './Toolbar.vue'
 import SideEditor from './SideEditor.vue'
 import SearchPanel from './SearchPanel.vue'
-import axios from 'axios'
+
+// 定义 props
+const props = defineProps({
+  initialData: {
+    type: Object,
+    default: () => ({ type: 'ppt', title: '新课件' })
+  }
+})
+
 const route = useRoute()
 const slides = ref([])
 const currentSlide = ref(null)
@@ -112,26 +103,90 @@ const fontSize = ref(16)
 const showPreview = ref(false)
 const showSearch = ref(false)
 const history = ref([])
-const API_BASE_URL = 'http://localhost:8000/api/v1'
-const downloadUrl = ref('')  // 只存下载链接
 const historyIndex = ref(-1)
 
+// 根据传入的标题生成初始幻灯片
+const generateInitialSlides = (title, type) => {
+  const cleanTitle = title || '新课件'
+  
+  // 根据不同类型生成不同的初始内容
+  if (type === 'ppt') {
+    return [
+      {
+        id: 1,
+        title: cleanTitle,
+        content: '这是根据您的需求自动生成的PPT课件内容。您可以双击编辑任何文字，也可以从右侧添加图片。',
+        bgColor: '#ffffff',
+        image: null,
+        steps: [
+          { id: 1, title: '第一步', desc: '点击编辑步骤标题和描述' },
+          { id: 2, title: '第二步', desc: '可以使用工具栏添加或删除步骤' },
+          { id: 3, title: '第三步', desc: '完成后可以预览或导出' }
+        ]
+      },
+      {
+  id: 2,
+  title: '新内容',
+  content: '点击添加新的内容...',
+  bgColor: '#ffffff',  // 改成白色，和第一页一致
+  image: null,
+  steps: []
+}
+    ]
+  } else if (type === 'lesson') {
+    return [
+      {
+        id: 1,
+        title: cleanTitle,
+        content: '【教学目标】\n1. 知识与技能目标\n2. 过程与方法目标\n3. 情感态度与价值观目标',
+        bgColor: '#fef9e7',
+        image: null,
+        steps: [
+          { id: 1, title: '教学重点', desc: '点击编辑教学重点' },
+          { id: 2, title: '教学难点', desc: '点击编辑教学难点' },
+          { id: 3, title: '教学过程', desc: '1. 导入\n2. 新授\n3. 练习\n4. 小结' }
+        ]
+      }
+    ]
+  } else if (type === 'gif') {
+    return [
+      {
+        id: 1,
+        title: cleanTitle,
+        content: '动画演示说明：',
+        bgColor: '#e6f7ff',
+        image: null,
+        steps: [
+          { id: 1, title: '第1帧', desc: '动画开始状态' },
+          { id: 2, title: '第2帧', desc: '动画过渡状态' },
+          { id: 3, title: '第3帧', desc: '动画结束状态' }
+        ]
+      }
+    ]
+  } else {
+    return [
+      {
+        id: 1,
+        title: cleanTitle,
+        content: '新内容',
+        bgColor: '#ffffff',
+        image: null,
+        steps: []
+      }
+    ]
+  }
+}
 
 // 初始化数据
 onMounted(() => {
-  slides.value = [
-    {
-      id: 1,
-      title: '点击编辑标题',
-      content: '点击编辑内容',
-      bgColor: '#ffffff',
-      image: null,
-      steps: [
-        { id: 1, title: '第一步', desc: '这是第一步的描述' },
-        { id: 2, title: '第二步', desc: '这是第二步的描述' }
-      ]
-    }
-  ]
+  // 获取路由参数（优先使用路由参数，如果没有则使用props）
+  const title = route.query.title || props.initialData.title || '新课件'
+  const type = route.query.type || props.initialData.type || 'ppt'
+  
+  console.log('PPT编辑器初始化，参数:', { title, type })
+  
+  // 根据类型和标题生成不同的内容
+  slides.value = generateInitialSlides(title, type)
   currentSlide.value = slides.value[0]
   saveToHistory()
 })
@@ -361,41 +416,6 @@ const updateImage = (image) => {
     alert('图片已添加')
   }
 }
-const handleGeneratePPT = async () => {
-  try {
-    alert('正在生成PPT，请稍候...')
-    
-    // 从路由参数获取大纲数据
-    const outlineParam = route.query.outline
-    if (!outlineParam) {
-      alert('未找到大纲数据')
-      return
-    }
-    
-    const outlineData = JSON.parse(outlineParam)
-    
-    const response = await axios.post(`${API_BASE_URL}/generate-content`, {
-      subject: outlineData.title || 'PPT生成',
-      stage: 'generate',
-      refined_outline: JSON.stringify(outlineData.items),  // 使用传入的 items
-      mode: 'dify'
-    })
-    
-    console.log('后端返回:', response.data)
-    
-    // 只处理下载链接
-    if (response.data.download_url) {
-      downloadUrl.value = response.data.download_url
-      alert('PPT生成成功！可以点击下载按钮')
-    } else {
-      alert('生成成功，但未获取到下载链接')
-    }
-    
-  } catch (error) {
-    console.error('生成PPT失败:', error)
-    alert('生成PPT失败：' + (error.response?.data?.message || error.message))
-  }
-}
 </script>
 
 <style scoped>
@@ -414,65 +434,111 @@ const handleGeneratePPT = async () => {
   );
   position: relative;
 }
-
-/* 左侧缩略图区域 */
+/* 左侧缩略图 - 统一高度和样式 */
 :deep(.sidebar) {
   width: 220px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   border-right: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  gap: 20px;
+  overflow-y: auto;
+  height: 100vh;
 }
 
-/* 右侧面板 */
+/* 缩略图项样式 */
+:deep(.thumb-item) {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+:deep(.thumb-item:hover) {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #91a7ff;
+  transform: translateX(4px);
+}
+
+/* active 选中状态 - 统一紫色边框 */
+:deep(.thumb-item.active) {
+  background: rgba(145, 167, 255, 0.15);
+  border-left: 3px solid #91a7ff;
+  border-radius: 8px;
+}
+
+:deep(.thumb-item.active .thumb-preview) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 缩略图预览区域 */
+:deep(.thumb-preview) {
+  width: 100%;
+  height: 100px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  position: relative;
+  background: linear-gradient(135deg, #91a7ff, #e3eeff);
+  padding: 8px;
+  overflow: hidden;
+}
 .right-panel {
   display: flex;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   border-left: 1px solid rgba(255, 255, 255, 0.5);
-  width: 350px;
+  width: 280px;
   height: 100vh;
 }
-
-/* 工具栏 */
+/* 
 :deep(.toolbar) {
   width: 60px;
   background: linear-gradient(135deg, #91a7ff, #e3eeff);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 0;
-  gap: 16px;
+  padding: 20px 0;
+  gap: 12px;
   height: 100%;
   overflow-y: auto;
 }
-
 :deep(.tool-btn) {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.3);
-  color: #34495e;
+  color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 :deep(.tool-btn:hover) {
   background: white;
-  color: rgb(11, 167, 175);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(11, 167, 175, 0.2);
-  border-color: rgb(11, 167, 175);
-}
+  color: #91a7ff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(145, 167, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}*/
 
 /* 配图面板 */
 :deep(.side-editor) {
-  flex: 1;
+  width: 220px;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
   padding: 20px;

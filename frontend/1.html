@@ -511,7 +511,6 @@
                 });
             });
         }
-
         // 添加进程
         document.getElementById('addProcessBtn').addEventListener('click', () => {
             const newId = `P${processes.length + 1}`;
@@ -524,7 +523,6 @@
             });
             renderProcessList();
         });
-
         // 算法切换
         document.querySelectorAll('.algo-btn').forEach(btn => {
             btn.addEventListener('click', () => {

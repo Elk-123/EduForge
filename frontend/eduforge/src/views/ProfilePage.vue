@@ -1,28 +1,19 @@
-<!-- ProfilePage.vue - 无标题，内容自然居中，仅内容区可滚动 -->
+<!-- ProfilePage.vue - 完整版，页面标题添加图标 -->
 <template>
   <div class="profile-container">
-    <!-- 返回按钮 - 和其他页面一样固定在顶部 -->
-    <div class="button-group">
-      <button class="back-button outline-button icon-button" @click="goBack">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-      </button>
-    </div>
-
     <!-- 左右布局容器 - 垂直居中 -->
     <div class="profile-layout">
       <!-- 左侧导航 -->
       <div class="profile-sidebar">
-        <!-- 用户信息卡片 -->
+        <!-- 用户信息卡片 - 可点击上传头像 -->
         <div class="user-card">
           <div class="user-avatar">
-            <span class="iconfont icon-yonghu avatar-icon"></span>
+            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" />
+            <span v-else class="iconfont icon-touxiang avatar-icon"></span>
           </div>
           <div class="user-info">
-            <div class="user-name">{{ username || '未登录用户' }}</div>
-            <div class="user-email">{{ userEmail || '暂无邮箱' }}</div>
+            <div class="user-name">{{ profileForm.username || '未登录用户' }}</div>
+            <div class="user-email">{{ profileForm.email || '暂无邮箱' }}</div>
           </div>
         </div>
 
@@ -51,14 +42,38 @@
       <!-- 右侧内容 - 唯一可滚动区域 -->
       <div class="profile-content">
         <div class="content-scroll">
-          <!-- 个人资料 -->
+          <!-- 个人资料 - 这里放头像上传 -->
           <div v-if="activeNav === 'profile'" class="content-section">
-            <h2 class="section-title">个人资料</h2>
+            <h2 class="section-title">
+              <span class="iconfont icon-touxiang section-icon"></span>
+              个人资料
+            </h2>
             
+            <!-- 头像上传区域 -->
+            <div class="avatar-upload-section" @click="triggerAvatarUpload">
+              <div class="avatar-preview">
+                <img v-if="avatarUrl" :src="avatarUrl" class="avatar-preview-img" />
+                <span v-else class="iconfont icon-touxiang avatar-placeholder"></span>
+                <div class="avatar-upload-overlay">
+                  <span class="iconfont icon-shangchuan"></span>
+                  <span>点击上传头像</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 隐藏的文件上传输入框 -->
+            <input 
+              type="file" 
+              ref="avatarInput" 
+              class="hidden-input" 
+              accept="image/*"
+              @change="handleAvatarUpload"
+            />
+
             <div class="profile-form">
               <div class="form-item">
                 <label class="form-label">用户名</label>
-                <input type="text" v-model="profileForm.username" class="form-input" placeholder="请输入用户名">
+                <input type="text" v-model="profileForm.username" class="form-input" placeholder="请输入用户名" @blur="saveUsername">
               </div>
               
               <div class="form-item">
@@ -82,7 +97,10 @@
 
           <!-- 创作历史 -->
           <div v-if="activeNav === 'history'" class="content-section">
-            <h2 class="section-title">创作历史</h2>
+            <h2 class="section-title">
+              <span class="iconfont icon-wenjian section-icon"></span>
+              创作历史
+            </h2>
             
             <div class="stats-cards">
               <div class="stat-card">
@@ -90,12 +108,16 @@
                 <div class="stat-label">总创作数</div>
               </div>
               <div class="stat-card">
-                <div class="stat-value">{{ historyStats.presentations }}</div>
-                <div class="stat-label">演示文稿</div>
+                <div class="stat-value">{{ historyStats.ppt }}</div>
+                <div class="stat-label">PPT课件</div>
               </div>
               <div class="stat-card">
-                <div class="stat-value">{{ historyStats.documents }}</div>
-                <div class="stat-label">文档</div>
+                <div class="stat-value">{{ historyStats.lesson }}</div>
+                <div class="stat-label">教案</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">{{ historyStats.gif }}</div>
+                <div class="stat-label">教学GIF</div>
               </div>
             </div>
 
@@ -107,26 +129,33 @@
               >全部</button>
               <button 
                 class="filter-btn" 
-                :class="{ active: historyFilter === 'presentation' }"
-                @click="historyFilter = 'presentation'"
-              >演示文稿</button>
+                :class="{ active: historyFilter === 'ppt' }"
+                @click="historyFilter = 'ppt'"
+              >PPT课件</button>
               <button 
                 class="filter-btn" 
-                :class="{ active: historyFilter === 'document' }"
-                @click="historyFilter = 'document'"
-              >文档</button>
+                :class="{ active: historyFilter === 'lesson' }"
+                @click="historyFilter = 'lesson'"
+              >教案</button>
+              <button 
+                class="filter-btn" 
+                :class="{ active: historyFilter === 'gif' }"
+                @click="historyFilter = 'gif'"
+              >教学GIF</button>
             </div>
 
             <div class="history-list">
               <div v-for="item in filteredHistory" :key="item.id" class="history-item">
                 <div class="history-item-left">
-                  <span :class="['iconfont', item.type === 'presentation' ? 'icon-xinjian_PPTyanshiwengao' : 'icon-wendang', 'history-icon']"></span>
+                  <span :class="['iconfont', getHistoryIcon(item.type), 'history-icon']"></span>
                   <div class="history-info">
                     <div class="history-title">{{ item.title }}</div>
                     <div class="history-meta">
                       <span>{{ item.date }}</span>
-                      <span>· {{ item.type === 'presentation' ? '演示文稿' : '文档' }}</span>
-                      <span>· {{ item.cardCount }}张卡片</span>
+                      <span>· {{ getHistoryTypeName(item.type) }}</span>
+                      <span v-if="item.type === 'ppt'">· {{ item.slideCount }}页</span>
+                      <span v-else-if="item.type === 'lesson'">· {{ item.stepCount }}环节</span>
+                      <span v-else-if="item.type === 'gif'">· {{ item.frameCount }}帧</span>
                     </div>
                   </div>
                 </div>
@@ -139,9 +168,12 @@
             </div>
           </div>
 
-          <!-- 帮助中心 -->
+          <!-- 帮助中心 - 标题带客服图标 -->
           <div v-if="activeNav === 'help'" class="content-section">
-            <h2 class="section-title">帮助中心</h2>
+            <h2 class="section-title">
+              <span class="iconfont icon-kefu section-icon"></span>
+              帮助中心
+            </h2>
             
             <div class="help-search">
               <span class="iconfont icon-sousuo search-icon"></span>
@@ -179,7 +211,7 @@
               <div class="support-title">没找到想要的答案？</div>
               <div class="support-btns">
                 <button class="support-btn" @click="contactEmail">
-                  <span class="iconfont icon-email"></span>
+                  <span class="iconfont icon-icon-youxiang"></span>
                   邮件联系
                 </button>
                 <button class="support-btn" @click="contactChat">
@@ -190,40 +222,43 @@
             </div>
           </div>
 
-          <!-- 关于我们 -->
+          <!-- 关于我们 - 标题带关于图标 -->
           <div v-if="activeNav === 'about'" class="content-section">
-            <h2 class="section-title">关于我们</h2>
+            <h2 class="section-title">
+              <span class="iconfont icon-guanyu_o section-icon"></span>
+              关于我们
+            </h2>
             
             <div class="about-content">
               <div class="about-logo">
                 <span class="iconfont icon-a-gongxiaoshanguangliangdian logo-icon"></span>
-                <span class="about-version">AI创作助手 v1.0.0</span>
+                <span class="about-version">教学智能体 v1.0.0</span>
               </div>
               
               <div class="about-desc">
-                AI创作助手是一款智能内容生成工具，帮助您快速创建专业的演示文稿和文档。
+                教学智能体是一款专业的教学辅助工具，帮助教师快速创建PPT课件、编写教案、制作教学GIF动画。
               </div>
               
               <div class="about-features">
                 <div class="feature-item">
                   <span class="iconfont icon-xinjian_PPTyanshiwengao feature-icon"></span>
                   <div class="feature-text">
-                    <div class="feature-title">AI智能生成</div>
-                    <div class="feature-desc">基于先进AI模型，快速生成高质量内容</div>
+                    <div class="feature-title">PPT课件生成</div>
+                    <div class="feature-desc">输入主题，自动生成精美课件，支持多种模板</div>
                   </div>
                 </div>
                 <div class="feature-item">
-                  <span class="iconfont icon-mobansheji feature-icon"></span>
+                  <span class="iconfont icon-wendang feature-icon"></span>
                   <div class="feature-text">
-                    <div class="feature-title">海量模板</div>
-                    <div class="feature-desc">提供多种专业模板，满足不同场景需求</div>
+                    <div class="feature-title">教案编写</div>
+                    <div class="feature-desc">根据教学目标，生成完整教案，包含教学目标、重难点、教学过程</div>
                   </div>
                 </div>
                 <div class="feature-item">
-                  <span class="iconfont icon-daoru feature-icon"></span>
+                  <span class="iconfont icon-gif feature-icon"></span>
                   <div class="feature-text">
-                    <div class="feature-title">多格式支持</div>
-                    <div class="feature-desc">支持PPT、Word、PDF等多种格式导入导出</div>
+                    <div class="feature-title">教学GIF制作</div>
+                    <div class="feature-desc">将抽象概念转化为生动的动画演示，支持多帧编辑</div>
                   </div>
                 </div>
               </div>
@@ -237,14 +272,17 @@
               </div>
               
               <div class="about-copyright">
-                © 2024 AI创作助手. All rights reserved.
+                © 2024 教学智能体. All rights reserved.
               </div>
             </div>
           </div>
 
-          <!-- 账号设置 -->
+          <!-- 账号设置 - 标题带设置图标 -->
           <div v-if="activeNav === 'settings'" class="content-section">
-            <h2 class="section-title">账号设置</h2>
+            <h2 class="section-title">
+              <span class="iconfont icon-shezhi section-icon"></span>
+              账号设置
+            </h2>
             
             <div class="settings-group">
               <h3 class="settings-group-title">安全设置</h3>
@@ -330,9 +368,11 @@ import { useRouter, useRoute } from 'vue-router'
 interface HistoryItem {
   id: number
   title: string
-  type: 'presentation' | 'document'
+  type: 'ppt' | 'lesson' | 'gif'
   date: string
-  cardCount: number
+  slideCount?: number
+  stepCount?: number
+  frameCount?: number
 }
 
 interface FAQ {
@@ -345,16 +385,27 @@ interface FAQ {
 const router = useRouter()
 const route = useRoute()
 const username = ref('')
-const userEmail = ref('')
+const avatarUrl = ref('')
+const avatarInput = ref<HTMLInputElement | null>(null)
 const activeNav = ref<string>('profile')
 const helpSearch = ref('')
 const activeHelpCat = ref<string>('all')
 const showChangePassword = ref(false)
-const historyFilter = ref<'all' | 'presentation' | 'document'>('all')
+const historyFilter = ref<'all' | 'ppt' | 'lesson' | 'gif'>('all')
 const hasMoreHistory = ref(true)
 
+// 从localStorage加载用户数据
 onMounted(() => {
-  username.value = localStorage.getItem('username') || '未登录用户'
+  const savedUsername = localStorage.getItem('username') || '未登录用户'
+  username.value = savedUsername
+  
+  const savedAvatar = localStorage.getItem('userAvatar')
+  if (savedAvatar) {
+    avatarUrl.value = savedAvatar
+  }
+  
+  // 初始化表单
+  profileForm.username = savedUsername
   
   const tab = route.query.tab as string
   if (tab && ['history', 'settings', 'help', 'about'].includes(tab)) {
@@ -370,10 +421,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'profile', name: '个人资料', icon: 'icon-yonghu' },
-  { id: 'history', name: '创作历史', icon: 'icon-lishi', badge: '12' },
-  { id: 'help', name: '帮助中心', icon: 'icon-bangzhu' },
-  { id: 'about', name: '关于我们', icon: 'icon-guanyu' },
+  { id: 'profile', name: '个人资料', icon: 'icon-touxiang' },
+  { id: 'history', name: '创作历史', icon: 'icon-wenjian', badge: '12' },
+  { id: 'help', name: '帮助中心', icon: 'icon-kefu' },
+  { id: 'about', name: '关于我们', icon: 'icon-guanyu_o' },
   { id: 'settings', name: '账号设置', icon: 'icon-shezhi' }
 ]
 
@@ -397,23 +448,42 @@ const settings = reactive({
 
 const historyStats = reactive({
   total: 28,
-  presentations: 16,
-  documents: 12
+  ppt: 12,
+  lesson: 8,
+  gif: 8
 })
 
 const historyList = ref<HistoryItem[]>([
-  { id: 1, title: '2024年度销售总结汇报', type: 'presentation', date: '2024-03-15', cardCount: 12 },
-  { id: 2, title: '产品发布会演讲文稿', type: 'presentation', date: '2024-03-14', cardCount: 8 },
-  { id: 3, title: '市场调研分析报告', type: 'document', date: '2024-03-13', cardCount: 15 },
-  { id: 4, title: '团队周报模板', type: 'document', date: '2024-03-12', cardCount: 6 },
-  { id: 5, title: '投资者路演PPT', type: 'presentation', date: '2024-03-11', cardCount: 20 },
-  { id: 6, title: '项目计划书', type: 'document', date: '2024-03-10', cardCount: 10 }
+  { id: 1, title: '分数初步认识', type: 'ppt', date: '2024-03-15', slideCount: 12 },
+  { id: 2, title: '光合作用教案', type: 'lesson', date: '2024-03-14', stepCount: 8 },
+  { id: 3, title: '细胞分裂过程', type: 'gif', date: '2024-03-13', frameCount: 15 },
+  { id: 4, title: '勾股定理证明', type: 'ppt', date: '2024-03-12', slideCount: 6 },
+  { id: 5, title: '英语现在完成时', type: 'lesson', date: '2024-03-11', stepCount: 10 },
+  { id: 6, title: '地球公转演示', type: 'gif', date: '2024-03-10', frameCount: 8 }
 ])
 
 const filteredHistory = computed<HistoryItem[]>(() => {
   if (historyFilter.value === 'all') return historyList.value
   return historyList.value.filter(item => item.type === historyFilter.value)
 })
+
+const getHistoryIcon = (type: string) => {
+  switch(type) {
+    case 'ppt': return 'icon-xinjian_PPTyanshiwengao'
+    case 'lesson': return 'icon-wendang'
+    case 'gif': return 'icon-gif'
+    default: return 'icon-wenjian'
+  }
+}
+
+const getHistoryTypeName = (type: string) => {
+  switch(type) {
+    case 'ppt': return 'PPT课件'
+    case 'lesson': return '教案'
+    case 'gif': return '教学GIF'
+    default: return '文档'
+  }
+}
 
 interface HelpCategory {
   id: string
@@ -422,49 +492,49 @@ interface HelpCategory {
 }
 
 const helpCategories: HelpCategory[] = [
-  { id: 'all', name: '全部', icon: 'icon-quanbu' },
-  { id: 'basic', name: '基础使用', icon: 'icon-jichu' },
-  { id: 'advanced', name: '高级功能', icon: 'icon-gaoji' },
-  { id: 'faq', name: '常见问题', icon: 'icon-wenti' },
-  { id: 'tutorial', name: '教程指南', icon: 'icon-jiaocheng' }
+  { id: 'all', name: '全部', icon: 'icon-sousuo' },
+  { id: 'ppt', name: 'PPT课件', icon: 'icon-xinjian_PPTyanshiwengao' },
+  { id: 'lesson', name: '教案', icon: 'icon-wendang' },
+  { id: 'gif', name: '教学GIF', icon: 'icon-gif' },
+  { id: 'account', name: '账号问题', icon: 'icon-touxiang' }
 ]
 
 const faqs = ref<FAQ[]>([
   { 
-    question: '如何开始使用AI生成内容？', 
-    answer: '在首页选择您想创作的类型（演示文稿或文档），然后输入提示词或粘贴内容，点击发送即可开始生成。',
+    question: '如何生成PPT课件？', 
+    answer: '在首页选择"生成PPT课件"，输入主题或上传教材，AI会自动生成精美的PPT课件，包含多页内容和步骤。',
     expanded: false,
-    category: 'basic'
+    category: 'ppt'
   },
   { 
-    question: '支持哪些文件格式导入？', 
-    answer: '目前支持导入PPTX、DOCX、PDF格式文件，以及Google Drive文档和网页URL。',
+    question: '如何编写教案？', 
+    answer: '在首页选择"编写教案"，输入教学目标和内容，AI会生成完整的教案，包括教学目标、重难点、教学过程等。',
     expanded: false,
-    category: 'basic'
+    category: 'lesson'
   },
   { 
-    question: '生成的內容可以导出为什么格式？', 
-    answer: '生成的演示文稿可以导出为PPTX格式，文档可以导出为DOCX格式，同时也支持PDF导出。',
+    question: '如何制作教学GIF？', 
+    answer: '在首页选择"制作教学GIF"，输入想要演示的概念，AI会生成多帧动画，您可以编辑每一帧的内容。',
     expanded: false,
-    category: 'basic'
+    category: 'gif'
   },
   { 
-    question: '如何查看我的创作历史？', 
-    answer: '在个人中心的"创作历史"选项卡中，您可以查看所有历史生成的文档和演示文稿。',
+    question: '如何查看创作历史？', 
+    answer: '在个人中心的"创作历史"选项卡中，您可以查看所有历史生成的PPT、教案和GIF，并可以继续编辑。',
     expanded: false,
-    category: 'faq'
+    category: 'account'
   },
   { 
-    question: 'AI生成的内容版权归谁所有？', 
-    answer: '您生成的内容版权归您所有，您可以自由使用、修改和分发。',
+    question: '如何修改头像和用户名？', 
+    answer: '在个人中心的"个人资料"页面，点击头像可以上传新头像，在表单中可以修改用户名和其他信息。',
     expanded: false,
-    category: 'faq'
+    category: 'account'
   },
   { 
-    question: '如何提高生成内容的质量？', 
-    answer: '提供更详细、更具体的提示词，选择合适的内容类型和语气风格，可以显著提高生成内容的质量。',
+    question: '如何导出已生成的内容？', 
+    answer: '在编辑器中点击"导出"按钮，可以选择导出为PPTX、PDF、GIF等格式。',
     expanded: false,
-    category: 'advanced'
+    category: 'ppt'
   }
 ])
 
@@ -493,16 +563,72 @@ const toggleFaq = (index: number) => {
   }
 }
 
-const goBack = () => {
-  router.back()
+const triggerAvatarUpload = () => {
+  avatarInput.value?.click()
+}
+
+const handleAvatarUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file) return
+  
+  if (!file.type.startsWith('image/')) {
+    alert('请上传图片文件')
+    return
+  }
+  
+  if (file.size > 2 * 1024 * 1024) {
+    alert('图片大小不能超过2MB')
+    return
+  }
+  
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const result = e.target?.result as string
+    avatarUrl.value = result
+    localStorage.setItem('userAvatar', result)
+    alert('头像上传成功！')
+  }
+  reader.readAsDataURL(file)
+}
+
+const saveUsername = () => {
+  if (profileForm.username) {
+    localStorage.setItem('username', profileForm.username)
+    username.value = profileForm.username
+  }
 }
 
 const saveProfile = () => {
+  if (profileForm.username) {
+    localStorage.setItem('username', profileForm.username)
+    username.value = profileForm.username
+  }
   alert('资料保存成功！')
 }
 
 const editItem = (item: HistoryItem) => {
-  router.push(`/editor/${item.id}`)
+  let path = ''
+  switch(item.type) {
+    case 'ppt':
+      path = '/editor'
+      break
+    case 'lesson':
+      path = '/lesson-editor'
+      break
+    case 'gif':
+      path = '/gif-editor'
+      break
+  }
+  router.push({
+    path: path,
+    query: {
+      title: item.title,
+      id: item.id.toString(),
+      t: Date.now().toString()
+    }
+  })
 }
 
 const downloadItem = (item: HistoryItem) => {
@@ -525,6 +651,7 @@ const handleLogout = () => {
   if (confirm('确定要退出登录吗？')) {
     localStorage.removeItem('isLoggedIn')
     localStorage.removeItem('username')
+    localStorage.removeItem('userAvatar')
     router.push('/')
   }
 }
@@ -554,7 +681,7 @@ const changePassword = () => {
 }
 
 const contactEmail = () => {
-  window.location.href = 'mailto:support@aicreator.com'
+  window.location.href = 'mailto:support@teachai.com'
 }
 
 const contactChat = () => {
@@ -562,7 +689,7 @@ const contactChat = () => {
 }
 
 const handleHelp = () => {
-  alert('个人中心：管理您的账号、查看创作历史和获取帮助')
+  alert('个人中心：管理您的账号、查看创作历史（PPT/教案/GIF）和获取帮助')
 }
 </script>
 
@@ -596,36 +723,9 @@ html, body {
   top: 0;
   left: 0;
   overflow: hidden;
-  /* 使用flex让内容垂直居中 */
   display: flex;
   flex-direction: column;
   justify-content: center;
-}
-
-.button-group {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 99;
-}
-
-.outline-button {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #34495e;
-  transition: all 0.2s ease;
-}
-
-.outline-button:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: scale(1.05);
 }
 
 /* 布局容器 - 垂直居中，左右留白 */
@@ -635,7 +735,7 @@ html, body {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  height: 80vh; /* 固定高度为视口的80%，自然居中 */
+  height: 80vh;
   overflow: hidden;
   padding: 0 20px;
 }
@@ -672,10 +772,17 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar-icon {
-  font-size: 32px;
+  font-size: 30px;
   color: white;
 }
 
@@ -818,15 +925,92 @@ html, body {
   width: 100%;
 }
 
+/* 页面标题 - 带图标样式 */
 .section-title {
   font-size: 24px;
   color: #1e3c5c;
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 2px solid rgba(11, 167, 175, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* 以下样式保持不变... */
+.section-icon {
+  font-size: 28px;
+  color: rgb(11, 167, 175);
+}
+
+/* 头像上传区域 - 在个人资料页面 */
+.avatar-upload-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+  cursor: pointer;
+}
+
+.avatar-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgb(11, 167, 175);
+  box-shadow: 0 4px 12px rgba(11, 167, 175, 0.3);
+}
+
+.avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #91a7ff, #e3eeff);
+  color: white;
+  font-size: 60px;
+}
+
+.avatar-upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.avatar-preview:hover .avatar-upload-overlay {
+  opacity: 1;
+}
+
+.avatar-upload-overlay .iconfont {
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+.avatar-upload-overlay span {
+  font-size: 12px;
+}
+
+.hidden-input {
+  display: none;
+}
+
+/* 个人资料表单 */
 .profile-form {
   max-width: 600px;
 }
@@ -888,9 +1072,10 @@ html, body {
   transform: scale(1.02);
 }
 
+/* 统计卡片 - 改为4列 */
 .stats-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -919,6 +1104,7 @@ html, body {
   display: flex;
   gap: 10px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
@@ -997,6 +1183,7 @@ html, body {
   color: #6e7781;
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .history-item-right {
@@ -1020,6 +1207,7 @@ html, body {
   color: #ff6b6b;
 }
 
+/* 帮助中心样式 */
 .help-search {
   position: relative;
   margin-bottom: 16px;
@@ -1054,13 +1242,19 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 30px;
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  font-size: 13px;
+  font-size: 14px;
   color: #4a5568;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.help-category:hover {
+  border-color: rgb(11, 167, 175);
+  background: rgba(11, 167, 175, 0.05);
 }
 
 .help-category.active {
@@ -1069,8 +1263,13 @@ html, body {
   border-color: rgb(11, 167, 175);
 }
 
+.help-category.active .category-icon {
+  color: white;
+}
+
 .category-icon {
-  font-size: 14px;
+  font-size: 16px;
+  color: #71cdd1;
 }
 
 .faq-list {
@@ -1189,6 +1388,7 @@ html, body {
   font-size: 14px;
   color: rgb(11, 167, 175);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .support-btn:hover {
@@ -1196,6 +1396,7 @@ html, body {
   color: white;
 }
 
+/* 关于我们 */
 .about-content {
   max-width: 600px;
   margin: 0 auto;
@@ -1244,6 +1445,7 @@ html, body {
   padding: 12px;
   background: white;
   border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .feature-icon {
@@ -1267,6 +1469,7 @@ html, body {
   color: #6e7781;
 }
 
+/* 账号设置 */
 .settings-group {
   margin-bottom: 20px;
 }
@@ -1286,6 +1489,7 @@ html, body {
   background: white;
   border-radius: 10px;
   margin-bottom: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .settings-item-left {
@@ -1312,6 +1516,7 @@ html, body {
   font-size: 13px;
   color: rgb(11, 167, 175);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .settings-btn:hover {
@@ -1364,6 +1569,7 @@ input:checked + .slider:before {
   transform: translateX(24px);
 }
 
+/* 弹窗样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1451,7 +1657,7 @@ input:checked + .slider:before {
 @media (max-width: 1024px) {
   .profile-layout {
     flex-direction: column;
-    height: 90vh; /* 小屏幕时更高一些 */
+    height: 90vh;
   }
   
   .profile-sidebar {
@@ -1462,6 +1668,10 @@ input:checked + .slider:before {
   
   .profile-content {
     height: calc(100% - 296px);
+  }
+  
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

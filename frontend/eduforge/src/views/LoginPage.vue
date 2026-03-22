@@ -199,7 +199,7 @@ const handleLogin = async (): Promise<void> => {
     localStorage.setItem('token_type', data.token_type)
     localStorage.setItem('username', username.value)
 
-    router.push('/home')
+    router.push('/chat')
   } catch (error) {
     alert('登录失败，请重试')
   } finally {

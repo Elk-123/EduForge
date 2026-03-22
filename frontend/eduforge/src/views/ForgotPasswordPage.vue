@@ -288,7 +288,7 @@ const generateCaptchaSVG = (text: string) => {
  *   }
  * }
  */
- const sendVerificationCode = async () => {
+const sendVerificationCode = async () => {
   // 只检查邮箱格式是否正确
   if (!email.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
     messageType.value = 'error';

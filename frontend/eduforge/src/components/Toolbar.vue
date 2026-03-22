@@ -28,9 +28,9 @@
     <button class="tool-btn" title="保存" @click="handleSave">
       <span class="iconfont">&#xec09;</span>
     </button>
-    <button class="tool-btn" title="撤销" @click="handleUndo">
-      <span class="iconfont">&#xe602;</span>
-    </button>
+   <button class="tool-btn" title="撤销" @click="handleUndo">
+  <span class="iconfont icon-chexiao1-copy"></span>
+</button>
     <button class="tool-btn" title="重做" @click="handleRedo">
       <span class="iconfont">&#xe604;</span>
     </button>
@@ -161,37 +161,38 @@ const handleExport = () => {
 <style scoped>
 .toolbar {
   width: 60px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #91a7ff, #e3eeff);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 0;
-  gap: 16px;
+  padding: 20px 0;
+  gap: 12px;
   height: 100%;
   overflow-y: auto;
-  bottom: 0; 
+  flex-shrink: 0;
 }
 
 .tool-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   transition: all 0.2s ease;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tool-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: white;
+  color: #91a7ff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(145, 167, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.3);
 }
 

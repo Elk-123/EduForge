@@ -51,31 +51,48 @@ defineEmits(['select-slide', 'add-slide'])
   height: 100%;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
 }
+/* 滚动条 - 紫色主题 */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
 
+.sidebar::-webkit-scrollbar-track {
+  background: rgba(145, 167, 255, 0.1);
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #91a7ff;
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #7c9eff;
+}
 .add-btn {
-  margin-top: 50px;
+  width: 100%;
   padding: 12px;
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed rgba(145, 167, 255, 0.5);
   border-radius: 12px;
-  background: #f8fafc;
-  color: #475569;
+  background: rgba(255, 255, 255, 0.8);
+  color: #1e3c5c;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  margin-top: 0;  /* 确保没有上边距 */
+  height: 48px;   /* 固定高度 */
 }
 
 .add-btn:hover {
-  border-color: #0ba7af;
-  color: #0ba7af;
+  border-color: #91a7ff;
+  color: #91a7ff;
   background: #f0f9ff;
 }
-
 .add-btn .iconfont {
   font-size: 16px;
 }
@@ -98,8 +115,8 @@ defineEmits(['select-slide', 'add-slide'])
 }
 
 .thumb-item.active .thumb-preview {
-  outline: 3px solid #0ba7af;
-  box-shadow: 0 4px 12px rgba(11, 167, 175, 0.2);
+  outline: 3px solid #91a7ff;
+  box-shadow: 0 4px 12px rgba(145, 167, 255, 0.2);
 }
 
 .thumb-preview {
