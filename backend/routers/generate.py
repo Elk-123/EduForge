@@ -16,8 +16,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # 1. 纯文本请求模型 (用于 JSON)
 class GenerateRequest(BaseModel):
     subject: str
-    stage: str = "outline"
-    refined_outline: str = ""
+    stage: str = "generate"
     mode: str = "dify"
 
 # ==================== 1. PPT 相关接口 ====================
@@ -29,7 +28,6 @@ async def generate_content(req: GenerateRequest):
     result = await dify_client.get_eduforge_content(
         subject=req.subject, 
         stage=req.stage, 
-        refined_outline=req.refined_outline
     )
     return await _handle_ppt_render(result, req.stage, session_id)
 
@@ -37,8 +35,7 @@ async def generate_content(req: GenerateRequest):
 @router.post("/generate-content-with-file")
 async def generate_content_with_file(
     subject: str = Form(...),
-    stage: str = Form("outline"),
-    refined_outline: str = Form(""),
+    stage: str = Form("generate"),
     file: UploadFile = File(...)
 ):
     session_id = str(int(time.time()))
@@ -48,7 +45,6 @@ async def generate_content_with_file(
         result = await dify_client.get_eduforge_content(
             subject=subject,
             stage=stage,
-            refined_outline=refined_outline,
             file_path=local_path
         )
         return await _handle_ppt_render(result, stage, session_id)
@@ -64,7 +60,6 @@ async def generate_lesson_plan(req: GenerateRequest):
     result = await dify_client.get_eduforge_content(
         subject=req.subject,
         stage="lesson_plan",
-        refined_outline=req.refined_outline
     )
     return await _handle_lesson_download(result, session_id)
 
@@ -72,7 +67,6 @@ async def generate_lesson_plan(req: GenerateRequest):
 @router.post("/generate-lesson-plan-with-file")
 async def generate_lesson_plan_with_file(
     subject: str = Form(...),
-    refined_outline: str = Form(""),
     file: UploadFile = File(...)
 ):
     session_id = str(int(time.time()))
@@ -82,7 +76,6 @@ async def generate_lesson_plan_with_file(
         result = await dify_client.get_eduforge_content(
             subject=subject,
             stage="lesson_plan",
-            refined_outline=refined_outline,
             file_path=local_path
         )
         return await _handle_lesson_download(result, session_id)

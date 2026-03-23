@@ -646,8 +646,7 @@
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       subject: userMessage.content, // 假设 content 就是主题
-      stage: "outline",      // 后端需要这个字段，必须提供
-      refined_outline: ""          // 同上，哪怕是空字符串
+      stage: "generate",      // 后端需要这个字段，必须提供 
     })
   }).catch(err => {
     console.warn('静默初始化失败', err);

@@ -41,13 +41,9 @@ class DifyWorkflowClient:
         safe_stage = str(stage or "outline")
         safe_outline = str(refined_outline or "")
         # backend/services/dify_service.py
-
-# ... 之前的逻辑 ...
-
         inputs = {
             "subject": safe_subject,
             "stage": safe_stage,
-            "refined_outline": safe_outline,
             "text": safe_subject,     # 👈 很多默认节点会找这个变量
             "query": safe_subject,    # 👈 兼容对话型应用
         }
