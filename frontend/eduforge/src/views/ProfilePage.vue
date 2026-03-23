@@ -429,8 +429,8 @@ const navItems: NavItem[] = [
 ]
 
 const profileForm = reactive({
-  username: '',
-  email: '',
+  username: 'ELK',
+  email: 'meng.archi6829@gmail.com',
   phone: '',
   bio: ''
 })

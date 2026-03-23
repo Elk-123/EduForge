@@ -335,7 +335,28 @@
   const isSpeechSupported = ref(true)
   const interimTranscript = ref('')
   let recognition: any = null
-  
+  // 定义固定剧本
+  const conversationScript = [
+    {
+      step: 1,
+      trigger: '操作系统进程调度',
+      reply: 'ELK老师，您想讲进程调度的哪一部分？是调度级别（三级调度），经典的调度算法（如 RR 或 MLFQ），还是上下文切换的底层机制？'
+    },
+    {
+      step: 2,
+      trigger: '经典调度算法',
+      reply: '这堂课是面向考研强化（侧重计算题和复杂推导），还是本科大二初次授课（侧重概念理解和直观演示）？'
+    },
+    {
+      step: 3,
+      trigger: '初次授课',
+      reply: '正在生成，请稍后...',
+      shouldJump: true // 最后一轮标志，准备跳转
+    }
+  ]
+
+  // 当前进行到第几步
+  const currentStep = ref(0)
   // 模拟历史会话数据
   const chatSessions = ref<ChatSession[]>([
     { id: 1, title: '分数教学课件', time: '10:30', date: '今天', timestamp: Date.now() - 2 * 60 * 60 * 1000, messages: [] },
@@ -603,65 +624,69 @@
   
   // 提交消息
   const handleSubmit = async () => {
-    if (!userInput.value.trim() && uploadedFiles.value.length === 0) return
-    if (isListening.value) {
-      recognition?.stop()
-    }
+  if (!userInput.value.trim() && uploadedFiles.value.length === 0) return
+  
+  // 1. 处理用户输入（展示在界面上，但不处理逻辑）
+  const userMessage = {
+    role: 'user',
+    content: userInput.value,
+    files: uploadedFiles.value.length ? [...uploadedFiles.value] : undefined
+  }
+  messages.value.push(userMessage)
+  
+  // 清空输入框
+  userInput.value = ''
+  uploadedFiles.value = []
+  
+  await scrollToBottom()
+  isLoading.value = true
+  if (currentStep.value === 0) {
+  fetch('api/v1/generate-content', { // 确保路径正确
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      subject: userMessage.content, // 假设 content 就是主题
+      stage: "outline",      // 后端需要这个字段，必须提供
+      refined_outline: ""          // 同上，哪怕是空字符串
+    })
+  }).catch(err => {
+    console.warn('静默初始化失败', err);
+  });
+}
+  // 2. 获取当前步骤的剧本内容
+  const scriptItem = conversationScript[currentStep.value]
+  
+  // 模拟 AI 思考延迟
+  setTimeout(async () => {
+    isLoading.value = false
     
-    const userMessage = {
-      role: 'user',
-      content: userInput.value,
-      files: uploadedFiles.value.length ? [...uploadedFiles.value] : undefined
-    }
-    messages.value.push(userMessage)
-    
-    const currentInput = userInput.value
-    const currentFiles = [...uploadedFiles.value]
-    userInput.value = ''
-    uploadedFiles.value = []
-    
-    await scrollToBottom()
-    isLoading.value = true
-    
-    // 判断内容类型
-    if (currentInput.includes('PPT') || currentInput.includes('课件')) {
-      lastGeneratedType.value = 'ppt'
-    } else if (currentInput.includes('教案')) {
-      lastGeneratedType.value = 'lesson'
-    } else if (currentInput.includes('GIF') || currentInput.includes('动画')) {
-      lastGeneratedType.value = 'gif'
-    } else {
-      lastGeneratedType.value = 'ppt'
-    }
-    
-    // 模拟AI回复
-    setTimeout(async () => {
-      isLoading.value = false
-      
-      let reply = ''
-      if (lastGeneratedType.value === 'ppt') {
-        reply = 'PPT课件已生成，正在为您打开PPT编辑器...'
-      } else if (lastGeneratedType.value === 'lesson') {
-        reply = '教案已生成，正在为您打开教案编辑器...'
-      } else if (lastGeneratedType.value === 'gif') {
-        reply = 'GIF动画已生成，正在为您打开动画编辑器...'
-      } else {
-        reply = '内容已生成，正在为您打开编辑器...'
-      }
-      
+    if (scriptItem) {
+      // 推送写死的回复
       messages.value.push({
         role: 'assistant',
-        content: reply
+        content: scriptItem.reply
       })
       
-      await scrollToBottom()
+      // 步骤加 1
+      currentStep.value++
       
-      // 延迟一点跳转，让用户看到回复
-      setTimeout(() => {
-        goToPreview()
-      }, 500)
-    }, 2000)
-  }
+      await scrollToBottom()
+
+      // 3. 判断是否需要跳转 (只有最后一步“初次授课”之后才跳转)
+      if (scriptItem.shouldJump) {
+        setTimeout(() => {
+          goToPreview()
+        }, 1500)
+      }
+    } else {
+      // 如果超出了剧本范围的保底处理
+      messages.value.push({
+        role: 'assistant',
+        content: '内容已记录，请继续。'
+      })
+    }
+  }, 1500)
+}
   
   const toggleUserMenu = () => {
     showUserMenu.value = !showUserMenu.value

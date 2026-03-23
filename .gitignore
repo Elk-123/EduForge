@@ -1,3 +1,4 @@
 backend/.env
 backend/temp_uploads
 postgres_data/
+my-web-project-image.tar
