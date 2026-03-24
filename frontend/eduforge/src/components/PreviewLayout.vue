@@ -60,10 +60,16 @@
         <!-- 游戏互动 -->
         <div v-show="activeTab === 'game'" class="preview-content">
           <div class="preview-header-tip">
-            <h3>游戏互动</h3>
-            <span class="tip-badge"></span>
+            <h3>游戏互动：操作系统进程调度算法演示</h3>
+            <span class="tip-badge">交互式动画</span>
           </div>
-          <div class="white-frame" ref="gameFrameRef"></div>
+          <div class="white-frame">
+            <iframe 
+              src="/1.html" 
+              style="width: 100%; height: 100%; border: none; border-radius: 16px;"
+              title="游戏互动演示"
+            ></iframe>
+          </div>
         </div>
       </div>
 
@@ -163,6 +169,13 @@
       </div>
     </div>
   </div>
+  <button 
+    class="preview-tab-btn"
+    @click="openGame"
+  >
+    <span class="iconfont icon-youxi"></span>
+    <span>游戏互动</span>
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -208,6 +221,13 @@ const currentTabName = computed(() => {
     default: return '内容'
   }
 })
+
+// 在 script 部分添加处理函数
+
+const openGame = () => {
+  // 使用 window.open 会在新标签页打开
+  window.open('/1.html', '_blank');
+};
 
 // 格式化文件大小
 const formatFileSize = (bytes: number): string => {

@@ -8,6 +8,7 @@ import ProfilePage from '@/views/ProfilePage.vue'
 import PPTEditor from '@/components/PPTEditor.vue'
 import LessonEditor from '@/components/LessonEditor.vue'
 import GifEditor from '@/components/GifEditor.fixed.vue'
+import PreviewLayout from '@/components/PreviewLayout.vue'
 
 const routes = [
   { path: '/', name: 'Login', component: LoginPage },
@@ -19,7 +20,8 @@ const routes = [
   { path: '/editor', name: 'PPTEditor', component: PPTEditor },
   { path: '/lesson-editor', name: 'LessonEditor', component: LessonEditor },
   { path: '/gif-editor', name: 'GifEditor', component: GifEditor }, // 这里用的是修复版
-  { path: '/profile', name: 'Profile', component: ProfilePage }
+  { path: '/profile', name: 'Profile', component: ProfilePage },
+  { path: '/preview-layout', name: 'preview-layout', component: PreviewLayout }  // 招笑你俩这里路由都不一样,还要我自己发现.神了!
 ]
 
 const router = createRouter({
