@@ -29,76 +29,79 @@ class DifyWorkflowClient:
                 return response.json().get("id")
 
     # --- 第二步：发送消息并关联文件 ---
-    async def get_eduforge_content(
-        self, subject: str, stage: str = "outline", 
-        refined_outline: str = "", file_path: str = None, user_id: str = "eduforge_user"
+    async def get_eduforge_combined_content(
+        self, subject: str, file_path: str = None, user_id: str = "eduforge_user"
     ):
-        current_key = self.lesson_api_key if stage == "lesson_plan" else self.ppt_api_key
-        headers = {"Authorization": f"Bearer {current_key}", "Content-Type": "application/json"}
+        # 统一使用 PPT 的 API KEY（假设你的 Dify 工作流在一个应用里同时处理这两者）
+        headers = {"Authorization": f"Bearer {self.ppt_api_key}", "Content-Type": "application/json"}
 
-        # 🌟 核心修复：无论什么 stage，都保证这三个核心变量不为 None 且都存在
-        safe_subject = str(subject or "未命名主题")
-        safe_stage = str(stage or "outline")
-        safe_outline = str(refined_outline or "")
-        # backend/services/dify_service.py
         inputs = {
-            "subject": safe_subject,
-            "stage": safe_stage,
-            "text": safe_subject,     # 👈 很多默认节点会找这个变量
-            "query": safe_subject,    # 👈 兼容对话型应用
+            "subject": str(subject or "未命名主题"),
+            "stage": "combined_generate", # 告诉 Dify 同时生成两者
         }
 
         payload = {
             "inputs": inputs,
-            "query": safe_subject,    # 👈 确保 query 字段不为空
+            "query": subject,
             "response_mode": "blocking",
             "user": user_id
         }
 
-        # 处理文件类型
+        # 处理文件上传（逻辑保持不变）
         if file_path and os.path.exists(file_path):
-            file_id = await self._upload_file(file_path, current_key)
+            file_id = await self._upload_file(file_path, self.ppt_api_key)
             ext = os.path.splitext(file_path)[1].lower()
-
-            # 🌟 核心点：确保如果是图片，type 必须是 image
             file_type = "image" if ext in [".png", ".jpg", ".jpeg"] else "document"
-            payload["files"] = [{
-                "type": file_type,
-                "transfer_method": "local_file",
-                "upload_file_id": file_id
-            }]
-        timeout = httpx.Timeout(120.0, connect=60.0)
+            payload["files"] = [{"type": file_type, "transfer_method": "local_file", "upload_file_id": file_id}]
+
+        # 增加 ReadTimeout 容错
+        timeout = httpx.Timeout(300.0, connect=60.0, read=None)
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(f"{self.base_url}/chat-messages", headers=headers, json=payload)
-            if response.status_code == 400:
-                print(f"❌ Dify 400 Error Detail: {response.text}")
             response.raise_for_status()
             resp_data = response.json()
 
-        # --- 解析逻辑 ---
+        # --- 核心合并解析逻辑 ---
         outputs = resp_data.get("data", {}).get("outputs", {})
         raw_answer = resp_data.get("answer", "")
-        
-        # 提取 Word 下载链接（针对教案插件）
+
+        # 1. 提取教案链接 (如果有)
         dify_file_url = None
         file_match = re.search(r'\[.*?\.docx\]\((.*?)\)', raw_answer)
         if file_match:
             dify_file_url = file_match.group(1)
             if dify_file_url.startswith('/'):
                 dify_file_url = f"http://127.0.0.1{dify_file_url}"
-        
-        clean_markdown = re.sub(r'\[.*?\.docx\]\(.*?\)\n?', '', raw_answer).strip()
 
-        # 处理 DSL (PPT 或教案文本)
-        final_dsl = clean_markdown if stage == "lesson_plan" else (
-            outputs.get("ppt_outline") or outputs.get("ppt_content") or outputs.get("dsl")
-        )
-
+        # 2. 提取 PPT DSL
+        # 兼容多种可能的输出变量名
+        ppt_dsl = outputs.get("ppt_dsl") or outputs.get("dsl") or outputs.get("ppt_content")
+        # 3. 提取纯文本教案 (用于前端 A4 纸即时预览)
+        lesson_text = outputs.get("lesson_plan") or outputs.get("text_content") or raw_answer
+        if not ppt_dsl:
+            # 匹配从第一个 { 到最后一个 } 的所有内容
+            # re.DOTALL 让 . 匹配包括换行符在内的所有字符
+            json_match = re.search(r'(\{.*\})', lesson_text, re.DOTALL)
+            if json_match:
+                ppt_dsl_candidate = json_match.group(1).strip()
+                try:
+                    # 验证提取的是否为合法 JSON
+                    json.loads(ppt_dsl_candidate)
+                    ppt_dsl = ppt_dsl_candidate
+                except json.JSONDecodeError:
+                    ppt_dsl = None
+        print("------------------------------------")
+        if ppt_dsl:
+            try:
+                # 🌟 关键：将字符串转为字典对象
+                ppt_dsl= json.loads(ppt_dsl)
+            except json.JSONDecodeError:
+                ppt_dsl = None
+                print("❌ JSON 格式错误，无法解析")
+        print(ppt_dsl)
         return {
-            "stage": stage,
-            "message": outputs.get("text_reply", "生成成功"),
-            "dsl": final_dsl,
+            "ppt_dsl": ppt_dsl,
+            "lesson_text": lesson_text,
             "file_url": dify_file_url,
-            "is_complete": True if final_dsl or dify_file_url else False,
-            "raw_response": resp_data 
+            "message": "课件与教案生成完毕"
         }

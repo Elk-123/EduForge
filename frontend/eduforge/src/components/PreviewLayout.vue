@@ -493,9 +493,32 @@ const sendMessage = async () => {
 
   setTimeout(() => {
     isAILoading.value = false
-    let reply = `收到您的指令！我会根据您的要求修改${currentTabName.value}的内容。`
+    
+    // 1. 添加 AI 回复消息
+    let reply = `收到您的指令！已为您更新了关于“${userMsg}”的课件内容。`
     chatMessages.value.push({ role: 'assistant', content: reply })
     scrollChatToBottom()
+
+    // 🌟 2. 核心：更新 PPT 预览展示另一个 PDF
+    // 这里假设你要展示的另一个 PDF 路径是 '/2.pdf'
+    const newPdfUrl = '/2.pdf' 
+    
+    // 强制切换到 PPT 标签页，确保用户能看到变化
+    activeTab.value = 'ppt'
+
+    nextTick(() => {
+      if (pptFrameRef.value) {
+        // 更新 iframe 内容
+        pptFrameRef.value.innerHTML = `
+          <iframe 
+            src="${newPdfUrl}" 
+            width="100%" 
+            height="100%" 
+            style="border:none; border-radius:16px;"
+          ></iframe>
+        `
+      }
+    })
   }, 1000)
 }
 

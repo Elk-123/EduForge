@@ -655,12 +655,12 @@ const formatFileSize = (bytes: number): string => {
   await scrollToBottom()
   isLoading.value = true
   if (currentStep.value === 0) {
-  fetch('api/v1/generate-lesson-plan', { // 确保路径正确
+  fetch('api/v1/generate-content', { // 确保路径正确
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       subject: userMessage.content, // 假设 content 就是主题
-      stage: "lesson_plan",      // 后端需要这个字段，必须提供 
+      stage: "generate",      // 后端需要这个字段，必须提供 
     })
   }).catch(err => {
     console.warn('静默初始化失败', err);
