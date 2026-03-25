@@ -689,7 +689,7 @@ const formatFileSize = (bytes: number): string => {
       if (scriptItem.shouldJump) {
         setTimeout(() => {
           generateAllThree()
-        }, 1500)
+        }, 8000)
       }
     } else {
       // 如果超出了剧本范围的保底处理

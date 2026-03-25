@@ -1,244 +1,360 @@
 <template>
-  <div class="login-container" @mousemove="handleMouseMove">
-    <!-- 眼睛区域 -->
-    <div class="eyes-wrapper">
-      <div class="eye" ref="eyeLeftRef">
-        <div class="pupil" :style="{ transform: pupilTransformLeft }"></div>
+  <div class="login-page">
+    <div class="login-card-main">
+      <!-- 左侧：四个小人物区域 -->
+      <div class="characters-side">
+        <div class="characters-wrapper">
+          <div class="characters-container">
+            <!-- 紫色角色 -->
+            <div 
+              ref="purpleCharacter"
+              class="character purple-character"
+              :style="{
+                height: (isTyping || (password.length > 0 && !showPassword)) ? '480px' : '440px',
+                transform: `skewX(${getPurpleSkew()}deg) ${(isTyping || (password.length > 0 && !showPassword)) ? 'translateX(40px)' : ''}`,
+                transformOrigin: 'bottom center'
+              }"
+            >
+              <div 
+                class="eyes-wrapper"
+                :style="{
+                  left: (password.length > 0 && showPassword) ? '20px' : isLookingAtEachOther ? '55px' : `${45 + purplePos.faceX}px`,
+                  top: (password.length > 0 && showPassword) ? '35px' : isLookingAtEachOther ? '65px' : `${40 + purplePos.faceY}px`
+                }"
+              >
+                <EyeBall :size="20" :pupil-size="8" :max-distance="5" :is-blinking="isPurpleBlinking"
+                  :force-look-x="getPurpleEyeX()" :force-look-y="getPurpleEyeY()" />
+                <EyeBall :size="20" :pupil-size="8" :max-distance="5" :is-blinking="isPurpleBlinking"
+                  :force-look-x="getPurpleEyeX()" :force-look-y="getPurpleEyeY()" />
+              </div>
+            </div>
+
+            <!-- 粉色角色 -->
+            <div 
+              ref="blackCharacter"
+              class="character black-character"
+              :style="{
+                transform: `skewX(${getBlackSkew()}deg) ${isLookingAtEachOther ? 'translateX(20px)' : ''}`,
+                transformOrigin: 'bottom center'
+              }"
+            >
+              <div 
+                class="eyes-wrapper"
+                :style="{
+                  left: (password.length > 0 && showPassword) ? '10px' : isLookingAtEachOther ? '32px' : `${26 + blackPos.faceX}px`,
+                  top: (password.length > 0 && showPassword) ? '28px' : isLookingAtEachOther ? '12px' : `${32 + blackPos.faceY}px`
+                }"
+              >
+                <EyeBall :size="18" :pupil-size="7" :max-distance="4" :is-blinking="isBlackBlinking"
+                  :force-look-x="password.length > 0 && showPassword ? -4 : (isLookingAtEachOther ? 0 : undefined)"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : (isLookingAtEachOther ? -4 : undefined)" />
+                <EyeBall :size="18" :pupil-size="7" :max-distance="4" :is-blinking="isBlackBlinking"
+                  :force-look-x="password.length > 0 && showPassword ? -4 : (isLookingAtEachOther ? 0 : undefined)"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : (isLookingAtEachOther ? -4 : undefined)" />
+              </div>
+            </div>
+
+            <!-- 深蓝色角色 -->
+            <div 
+              ref="orangeCharacter"
+              class="character orange-character"
+              :style="{
+                transform: `skewX(${password.length > 0 && showPassword ? 0 : orangePos.bodySkew}deg)`,
+                transformOrigin: 'bottom center'
+              }"
+            >
+              <div 
+                class="pupils-wrapper"
+                :style="{
+                  left: (password.length > 0 && showPassword) ? '50px' : `${82 + orangePos.faceX}px`,
+                  top: (password.length > 0 && showPassword) ? '85px' : `${90 + orangePos.faceY}px`
+                }"
+              >
+                <Pupil :size="14" :max-distance="5" :force-look-x="password.length > 0 && showPassword ? -5 : undefined"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : undefined" />
+                <Pupil :size="14" :max-distance="5" :force-look-x="password.length > 0 && showPassword ? -5 : undefined"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : undefined" />
+              </div>
+            </div>
+
+            <!-- 黄色角色 -->
+            <div 
+              ref="yellowCharacter"
+              class="character yellow-character"
+              :style="{
+                transform: `skewX(${password.length > 0 && showPassword ? 0 : yellowPos.bodySkew}deg)`,
+                transformOrigin: 'bottom center'
+              }"
+            >
+              <div 
+                class="pupils-wrapper"
+                :style="{
+                  left: (password.length > 0 && showPassword) ? '20px' : `${52 + yellowPos.faceX}px`,
+                  top: (password.length > 0 && showPassword) ? '35px' : `${40 + yellowPos.faceY}px`
+                }"
+              >
+                <Pupil :size="14" :max-distance="5" :force-look-x="password.length > 0 && showPassword ? -5 : undefined"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : undefined" />
+                <Pupil :size="14" :max-distance="5" :force-look-x="password.length > 0 && showPassword ? -5 : undefined"
+                  :force-look-y="password.length > 0 && showPassword ? -4 : undefined" />
+              </div>
+              <div 
+                class="mouth"
+                :style="{
+                  left: (password.length > 0 && showPassword) ? '10px' : `${40 + yellowPos.faceX}px`,
+                  top: (password.length > 0 && showPassword) ? '88px' : `${88 + yellowPos.faceY}px`
+                }"
+              ></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="decorative-bg"></div>
+        <div class="blur-circle top-blur"></div>
+        <div class="blur-circle bottom-blur"></div>
       </div>
-      <div class="eye" ref="eyeRightRef">
-        <div class="pupil" :style="{ transform: pupilTransformRight }"></div>
+
+      <!-- 右侧：登录表单区域 -->
+      <div class="form-side">
+        <div class="form-content">
+          <h1 class="form-title">欢迎回来</h1>
+          <p class="form-subtitle">请输入您的详细信息</p>
+
+          <form @submit.prevent="handleLogin" class="login-form">
+            <div class="input-wrapper">
+              <input type="text" placeholder="账号" v-model="username"
+                @focus="isTyping = true" @blur="isTyping = false" required class="form-input" />
+            </div>
+
+            <div class="input-wrapper">
+              <input :type="showPassword ? 'text' : 'password'" placeholder="密码" v-model="password" required class="form-input" />
+              <span v-if="password.length > 0" class="input-icon password-toggle" @click="showPassword = !showPassword">👁️</span>
+            </div>
+
+            <div v-if="error" class="error-message">{{ error }}</div>
+
+            <div class="form-links">
+              <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+              <router-link to="/register" class="register-link">注册账号</router-link>
+            </div>
+
+            <button type="submit" class="submit-btn" :disabled="isLoggingIn">
+              {{ isLoggingIn ? '登录中...' : '登录' }}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
-
-    <!-- 登录卡片 -->
-    <div class="login-card-wrapper">
-      <div class="gradient-bg"></div>
-      
-      <div class="login-card">
-        <h1 class="login-title">登录</h1>
-        
-        <div class="input-wrapper">
-          <input 
-            type="text" 
-            v-model="username"
-            placeholder="账号"
-            class="login-input"
-            @keyup.enter="handleLogin"
-          />
-          <!-- 账号图标：已移除 -->
-        </div>
-        
-        <div class="input-wrapper">
-          <input 
-            :type="showPassword ? 'text' : 'password'" 
-            v-model="password"
-            placeholder="密码"
-            class="login-input"
-            @keyup.enter="handleLogin"
-          />
-          <!-- 只有输入密码时才显示切换图标 -->
-          <span 
-            v-if="password.length > 0"
-            class="input-icon password-toggle iconfont" 
-            :class="showPassword ? 'icon-icon-xianshi' : 'icon-icon-yanjing_yincang'"
-            @click="showPassword = !showPassword"
-          ></span>
-        </div>
-        
-        <div class="login-links">
-          <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
-          <router-link to="/register" class="register-link">注册账号</router-link>
-        </div>
-        
-        <button class="login-btn" @click.prevent="handleLogin" :disabled="isLoggingIn">
-          {{ isLoggingIn ? '登录中...' : '登录' }}
-        </button>
-      </div>
-    </div>
-
-    <!-- 帮助按钮 -->
-    <div class="help-button" @click="handleHelp">?</div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+<script setup>
+import Pupil from './Pupil.vue'
+import EyeBall from './EyeBall.vue'
+import { ref, reactive, onMounted, onUnmounted, watch, provide } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+
+const showPassword = ref(false)
 const username = ref('')
 const password = ref('')
-const showPassword = ref(false)
+const error = ref('')
 const isLoggingIn = ref(false)
 
-// 眼睛元素引用
-const eyeLeftRef = ref<HTMLElement | null>(null)
-const eyeRightRef = ref<HTMLElement | null>(null)
+// 动画状态
+const mouseX = ref(0)
+const mouseY = ref(0)
+const isPurpleBlinking = ref(false)
+const isBlackBlinking = ref(false)
+const isTyping = ref(false)
+const isLookingAtEachOther = ref(false)
+const isPurplePeeking = ref(false)
 
-// 瞳孔变换
-const pupilTransformLeft = ref('translate(-50%, -50%)')
-const pupilTransformRight = ref('translate(-50%, -50%)')
+provide('mouseX', mouseX)
+provide('mouseY', mouseY)
 
-// 鼠标位置跟踪
-const mousePosition = ref({ x: 0, y: 0 })
-const isMouseMoving = ref(false)
-// 修复 timer 类型
-let mouseMoveTimer: ReturnType<typeof setTimeout> | null = null
+const purpleCharacter = ref(null)
+const blackCharacter = ref(null)
+const orangeCharacter = ref(null)
+const yellowCharacter = ref(null)
 
-// 限制瞳孔移动范围的函数
-const calculatePupilPosition = (eyeElement: HTMLElement, mouseX: number, mouseY: number): string => {
-  const rect = eyeElement.getBoundingClientRect()
-  
-  const eyeCenterX = rect.left + rect.width / 2
-  const eyeCenterY = rect.top + rect.height / 2
-  
-  const deltaX = mouseX - eyeCenterX
-  const deltaY = mouseY - eyeCenterY
-  
-  const angle = Math.atan2(deltaY, deltaX)
-  
-  const eyeRadius = rect.width / 2
-  const pupilRadius = 20
-  const maxMove = eyeRadius - pupilRadius - 5
-  
-  const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxMove)
-  
-  const moveX = Math.cos(angle) * distance
-  const moveY = Math.sin(angle) * distance
-  
-  return `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`
-}
+const purplePos = reactive({ faceX: 0, faceY: 0, bodySkew: 0 })
+const blackPos = reactive({ faceX: 0, faceY: 0, bodySkew: 0 })
+const orangePos = reactive({ faceX: 0, faceY: 0, bodySkew: 0 })
+const yellowPos = reactive({ faceX: 0, faceY: 0, bodySkew: 0 })
 
-// 更新瞳孔位置
-const updatePupils = () => {
-  if (!isMouseMoving.value) return
-  
-  requestAnimationFrame(() => {
-    if (eyeLeftRef.value) {
-      pupilTransformLeft.value = calculatePupilPosition(eyeLeftRef.value, mousePosition.value.x, mousePosition.value.y)
-    }
-    if (eyeRightRef.value) {
-      pupilTransformRight.value = calculatePupilPosition(eyeRightRef.value, mousePosition.value.x, mousePosition.value.y)
-    }
-  })
-}
-
-// 处理鼠标移动
-const handleMouseMove = (e: MouseEvent) => {
-  mousePosition.value = { x: e.clientX, y: e.clientY }
-  isMouseMoving.value = true
-  
-  if (mouseMoveTimer) {
-    clearTimeout(mouseMoveTimer)
-  }
-  
-  mouseMoveTimer = setTimeout(() => {
-    isMouseMoving.value = false
-    pupilTransformLeft.value = 'translate(-50%, -50%)'
-    pupilTransformRight.value = 'translate(-50%, -50%)'
-  }, 2000)
-  
-  updatePupils()
-}
-
-onMounted(() => {
-  setTimeout(() => {
-    if (eyeLeftRef.value && eyeRightRef.value) {
-      const centerX = window.innerWidth / 2
-      const centerY = window.innerHeight / 2
-      mousePosition.value = { x: centerX, y: centerY }
-      isMouseMoving.value = true
-      updatePupils()
-      
-      setTimeout(() => {
-        isMouseMoving.value = false
-        pupilTransformLeft.value = 'translate(-50%, -50%)'
-        pupilTransformRight.value = 'translate(-50%, -50%)'
-      }, 2000)
-    }
-  }, 100)
+const blinkTimers = reactive({
+  purple: null, black: null, lookTimer: null, peekTimer: null
 })
 
-onUnmounted(() => {
-  if (mouseMoveTimer) {
-    clearTimeout(mouseMoveTimer)
-  }
-})
+const calculatePosition = (el) => {
+  if (!el) return { faceX: 0, faceY: 0, bodySkew: 0 }
+  const rect = el.getBoundingClientRect()
+  const centerX = rect.left + rect.width / 2
+  const centerY = rect.top + rect.height / 3
+  const deltaX = mouseX.value - centerX
+  const deltaY = mouseY.value - centerY
+  const faceX = Math.max(-15, Math.min(15, deltaX / 20))
+  const faceY = Math.max(-10, Math.min(10, deltaY / 30))
+  const bodySkew = Math.max(-6, Math.min(6, -deltaX / 120))
+  return { faceX, faceY, bodySkew }
+}
 
+const updateCharacterPositions = () => {
+  const purpleData = calculatePosition(purpleCharacter.value)
+  purplePos.faceX = purpleData.faceX
+  purplePos.faceY = purpleData.faceY
+  purplePos.bodySkew = purpleData.bodySkew
+  const blackData = calculatePosition(blackCharacter.value)
+  blackPos.faceX = blackData.faceX
+  blackPos.faceY = blackData.faceY
+  blackPos.bodySkew = blackData.bodySkew
+  const orangeData = calculatePosition(orangeCharacter.value)
+  orangePos.faceX = orangeData.faceX
+  orangePos.faceY = orangeData.faceY
+  orangePos.bodySkew = orangeData.bodySkew
+  const yellowData = calculatePosition(yellowCharacter.value)
+  yellowPos.faceX = yellowData.faceX
+  yellowPos.faceY = yellowData.faceY
+  yellowPos.bodySkew = yellowData.bodySkew
+}
 
-const handleLogin = async (): Promise<void> => {
+const getPurpleSkew = () => {
+  if (password.value.length > 0 && showPassword.value) return 0
+  return (purplePos.bodySkew || 0) - (isTyping.value || (password.value.length > 0 && !showPassword.value) ? 12 : 0)
+}
+
+const getBlackSkew = () => {
+  if (password.value.length > 0 && showPassword.value) return 0
+  return isLookingAtEachOther.value 
+    ? (blackPos.bodySkew || 0) * 1.5 + 10 
+    : (isTyping.value || (password.value.length > 0 && !showPassword.value) 
+        ? (blackPos.bodySkew || 0) * 1.5 
+        : blackPos.bodySkew || 0)
+}
+
+const getPurpleEyeX = () => {
+  if (password.value.length > 0 && showPassword.value) return isPurplePeeking.value ? 4 : -4
+  return isLookingAtEachOther.value ? 3 : undefined
+}
+
+const getPurpleEyeY = () => {
+  if (password.value.length > 0 && showPassword.value) return isPurplePeeking.value ? 5 : -4
+  return isLookingAtEachOther.value ? 4 : undefined
+}
+
+const handleMouseMove = (e) => {
+  mouseX.value = e.clientX
+  mouseY.value = e.clientY
+  updateCharacterPositions()
+}
+
+const scheduleBlink = (blinkingState) => {
+  const interval = Math.random() * 4000 + 3000
+  return setTimeout(() => {
+    blinkingState.value = true
+    setTimeout(() => {
+      blinkingState.value = false
+      scheduleBlink(blinkingState)
+    }, 150)
+  }, interval)
+}
+
+const schedulePeek = () => {
+  const interval = Math.random() * 3000 + 2000
+  blinkTimers.peekTimer = setTimeout(() => {
+    isPurplePeeking.value = true
+    setTimeout(() => {
+      isPurplePeeking.value = false
+      if (password.value.length > 0 && showPassword.value) schedulePeek()
+    }, 800)
+  }, interval)
+}
+
+const validUsers = [
+  { username: 'admin', password: 'admin123' },
+  { username: 'user', password: 'user123' },
+  { username: 'test', password: 'test123' },
+  { username: 'ELK', password: 'admin123' },
+  { username: 'ELK', password: '666666' }
+]
+
+const handleLogin = async () => {
   if (!username.value || !password.value) {
-    alert('请输入账号和密码')
+    error.value = '请输入账号和密码'
     return
   }
-
   isLoggingIn.value = true
-
   try {
-    const formData = new URLSearchParams()
-    formData.append('username', username.value)
-    formData.append('password', password.value)
-
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'  // 🌟 必须这个类型
-      },
-      body: formData
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      alert(error.detail || '登录失败')
-      return
+    await new Promise(resolve => setTimeout(resolve, 800))
+    const user = validUsers.find(
+      u => u.username === username.value && u.password === password.value
+    )
+    if (user) {
+      localStorage.setItem('isLoggedIn', 'true')
+      localStorage.setItem('username', username.value)
+      router.push('/chat')
+    } else {
+      error.value = '用户名或密码错误'
     }
-
-    const data = await response.json()
-    // 保存 token 到 localStorage
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('token_type', data.token_type)
-    localStorage.setItem('username', username.value)
-
-    router.push('/chat')
-  } catch (error) {
-    alert('登录失败，请重试')
+  } catch (err) {
+    error.value = '登录失败，请重试'
   } finally {
     isLoggingIn.value = false
   }
 }
 
-const handleHelp = (): void => {
-  alert('请输入您的账号和密码进行登录\n测试账号：admin/admin123')
-}
-</script>
+onMounted(() => {
+  window.addEventListener('mousemove', handleMouseMove)
+  blinkTimers.purple = scheduleBlink(isPurpleBlinking)
+  blinkTimers.black = scheduleBlink(isBlackBlinking)
+  updateCharacterPositions()
 
+  watch(isTyping, (val) => {
+    if (val) {
+      isLookingAtEachOther.value = true
+      blinkTimers.lookTimer = setTimeout(() => isLookingAtEachOther.value = false, 800)
+    } else {
+      isLookingAtEachOther.value = false
+      clearTimeout(blinkTimers.lookTimer)
+    }
+  })
+
+  watch([password, showPassword], ([pwd, show]) => {
+    if (pwd.length > 0 && show) schedulePeek()
+    else {
+      clearTimeout(blinkTimers.peekTimer)
+      isPurplePeeking.value = false
+    }
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', handleMouseMove)
+  clearTimeout(blinkTimers.purple)
+  clearTimeout(blinkTimers.black)
+  clearTimeout(blinkTimers.lookTimer)
+  clearTimeout(blinkTimers.peekTimer)
+})
+</script>
 <style scoped>
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 确保iconfont样式正确 */
-.iconfont {
-  font-family: "iconfont" !important;
-  font-style: normal;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.login-container {
+.login-page {
   width: 100vw;
   height: 100vh;
   position: fixed;
   top: 0;
   left: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   background: linear-gradient(
     135deg,
     rgba(212, 245, 245, 0.3) 0%,
@@ -247,141 +363,216 @@ const handleHelp = (): void => {
     rgba(189, 236, 236, 0.4) 75%,
     rgba(212, 245, 245, 0.3) 100%
   );
-}
-
-.eyes-wrapper {
-  display: flex;
-  gap: 40px;
-  margin-bottom: 40px;
-  z-index: 10;
-}
-
-.eye {
-  width: 120px;
-  height: 120px;
-  background: white;
-  border-radius: 50%;
-  position: relative;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.eye::after {
-  content: '';
-  position: absolute;
-  top: 20%;
-  left: 20%;
-  width: 25%;
-  height: 25%;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0.8;
-  filter: blur(1px);
+.login-card-main {
+  width: 1100px;
+  height: 700px;
+  display: flex;
+  border-radius: 32px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-.pupil {
-  width: 40px;
-  height: 40px;
-  background: #1e3c5c;
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s ease-out;
-  box-shadow: inset 0 0 0 2px #2a4a6a, 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 3;
-}
-
-.pupil::after {
-  content: '';
-  position: absolute;
-  top: 15%;
-  left: 15%;
-  width: 25%;
-  height: 25%;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  z-index: 4;
-}
-
-.login-card-wrapper {
+.characters-side {
+  flex: 1;
   position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  z-index: 5;
 }
 
-.gradient-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
+.characters-wrapper {
+  position: relative;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.2) 0%, transparent 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.characters-container {
+  position: relative;
+  width: 550px;
+  height: 500px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.character {
+  position: absolute;
+  bottom: 0;
+  transition: all 0.7s ease-in-out;
+  border-radius: 10px 10px 0 0;
+}
+
+.purple-character {
+  left: 70px;
+  width: 200px;
+  height: 440px;
+  background-color: #91a7ff;
   z-index: 1;
 }
 
-/* 统一卡片宽度为 420px，与忘记密码页面一致 */
-.login-card {
-  position: relative;
-  width: 420px;
-  height: 450px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 15px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+.black-character {
+  left: 270px;
+  width: 140px;
+  height: 350px;
+  background-color: #f7d2ea;
+  border-radius: 8px 8px 0 0;
   z-index: 2;
-  padding: 20px 30px;
+}
+
+.orange-character {
+  left: -20px;
+  width: 280px;
+  height: 240px;
+  background-color: #9bcbed;
+  border-radius: 140px 140px 0 0;
+  z-index: 3;
+}
+
+.yellow-character {
+  left: 370px;
+  width: 160px;
+  height: 270px;
+  background-color: #f5e3bd;
+  border-radius: 80px 80px 0 0;
+  z-index: 4;
+}
+
+.eyes-wrapper {
+  position: absolute;
+  display: flex;
+  gap: 2rem;
+  transition: all 0.7s ease-in-out;
+}
+
+.pupils-wrapper {
+  position: absolute;
+  display: flex;
+  gap: 2rem;
+  transition: all 0.2s ease-out;
+}
+
+.mouth {
+  position: absolute;
+  width: 5rem;
+  height: 4px;
+  background-color: #2D2D2D;
+  border-radius: 9999px;
+  transition: all 0.2s ease-out;
+}
+
+.decorative-bg {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.blur-circle {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  filter: blur(60px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.top-blur {
+  top: 10%;
+  right: 10%;
+  width: 200px;
+  height: 200px;
+}
+
+.bottom-blur {
+  bottom: 10%;
+  left: 10%;
+  width: 280px;
+  height: 280px;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.form-side {
+  width: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.form-content {
+  width: 100%;
+  padding: 0 40px;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  align-items: center;
 }
 
-.login-title {
-  text-align: center;
-  margin-bottom: 50px;
-  margin-top: 40px;
-  font-size: 42px;
-  color: #1e3c5c;
+.form-title {
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: 1px;
+  color: #1e3c5c;
+  text-align: center;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
-/* 输入框宽度设为100%，自适应卡片宽度 */
+.form-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
 .input-wrapper {
   position: relative;
   width: 100%;
-  margin: 0 auto 25px;
 }
 
-.login-input {
+.form-input {
   width: 100%;
-  height: 42px;
-  padding: 0 40px 0 20px;
-  border-radius: 25px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  font-size: 15px;
+  height: 48px;
+  padding: 0 45px 0 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 14px;
   outline: none;
   background: rgba(255, 255, 255, 0.9);
   transition: all 0.2s ease;
   color: #34495e;
 }
 
-.login-input:focus {
+.form-input:focus {
   border-color: rgb(11, 167, 175);
-  box-shadow: 0 0 0 3px rgba(11, 167, 175, 0.2);
+  box-shadow: 0 0 0 3px rgba(11, 167, 175, 0.1);
   background: white;
 }
 
-.login-input::placeholder {
-  color: #999;
+.form-input::placeholder {
+  color: #aaa;
 }
 
 .input-icon {
@@ -389,112 +580,93 @@ const handleHelp = (): void => {
   right: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
-  font-size: 18px;
-  transition: all 0.2s ease;
-  z-index: 3;
-}
-
-.password-toggle {
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
-.password-toggle:hover {
-  color: rgb(11, 167, 175);
-  transform: translateY(-50%) scale(1.1);
+.input-icon:hover {
+  opacity: 1;
 }
 
-.login-links {
+.error-message {
+  padding: 10px;
+  font-size: 12px;
+  color: #f87171;
+  background-color: rgba(185, 28, 28, 0.1);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.form-links {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  margin: 0 auto 20px;
+  margin-top: 8px;
 }
 
 .forgot-link, .register-link {
-  color: #004288bf;
-  font-size: 14px;
+  color: rgb(11, 167, 175);
   text-decoration: none;
-  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
 .forgot-link:hover, .register-link:hover {
-  color: rgb(11, 167, 175);
+  color: rgb(8, 130, 136);
   text-decoration: underline;
 }
 
-.login-btn {
-  height: 44px;
-  width: 140px;
-  margin-top: 20px;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
-  font-size: 18px;
-  font-weight: 500;
+.submit-btn {
+  height: 48px;
+  width: 100%;
   border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  outline: none;
+  border-radius: 12px;
   background: rgb(11, 167, 175);
   color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: rgb(8, 130, 136);
+  transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(11, 167, 175, 0.3);
 }
 
-.login-btn:hover:not(:disabled) {
-  background: rgb(8, 130, 136);
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(11, 167, 175, 0.4);
-}
-
-.login-btn:disabled {
+.submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.help-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: #34495e;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  z-index: 1000;
-}
-
-.help-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+@media (max-width: 1024px) {
+  .login-card-main {
+    width: 90%;
+    height: auto;
+    flex-direction: column;
+  }
+  .characters-side {
+    height: 400px;
+  }
+  .form-side {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 30px 0;
+  }
 }
 
 @media (max-width: 768px) {
-  .eye {
-    width: 80px;
-    height: 80px;
+  .form-content {
+    padding: 0 25px;
   }
-  .pupil {
-    width: 28px;
-    height: 28px;
-  }
-  .eyes-wrapper {
-    gap: 20px;
-    margin-bottom: 20px;
-  }
-  .login-card {
-    width: 340px;
-    height: 420px;
-    padding: 20px;
+  .characters-side {
+    display: none;
   }
 }
 </style>

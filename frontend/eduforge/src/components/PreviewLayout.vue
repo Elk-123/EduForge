@@ -168,6 +168,13 @@
         </div>
       </div>
     </div>
+    <button 
+      class="fixed-download-btn"
+      @click="downloadFile"
+    >
+      <span class="iconfont icon-xiazai"></span>
+      <span>下载课件/教案</span>
+    </button>
   </div>
   <button 
     class="preview-tab-btn"
@@ -470,6 +477,8 @@ const handleWordPreview = async (file: File | Blob) => {
     }
   }
 }
+const showPdfNext = ref(true)
+const downloadFileNext = ref(true)
 const sendMessage = async () => {
   if ((!userInput.value.trim() && uploadedFiles.value.length === 0) || isAILoading.value) return
   
@@ -480,7 +489,6 @@ const sendMessage = async () => {
   const userMsg = userInput.value
   const currentFiles = [...uploadedFiles.value]
   
-  // 添加用户消息
   chatMessages.value.push({ 
     role: 'user', 
     content: userMsg || (currentFiles.length ? `上传了 ${currentFiles.length} 个文件` : '')
@@ -491,37 +499,70 @@ const sendMessage = async () => {
 
   isAILoading.value = true
 
-  setTimeout(() => {
+  setTimeout(async () => {
     isAILoading.value = false
     
-    // 1. 添加 AI 回复消息
     let reply = `收到您的指令！已为您更新了关于“${userMsg}”的课件内容。`
     chatMessages.value.push({ role: 'assistant', content: reply })
     scrollChatToBottom()
 
-    // 🌟 2. 核心：更新 PPT 预览展示另一个 PDF
-    // 这里假设你要展示的另一个 PDF 路径是 '/2.pdf'
-    const newPdfUrl = '/2.pdf' 
-    
-    // 强制切换到 PPT 标签页，确保用户能看到变化
-    activeTab.value = 'ppt'
+    // ==============================================
+    // ✅ 修复：PDF用iframe，DOCX用你原有渲染函数（不下载）
+    // ==============================================
+    if (showPdfNext.value) {
+      // 第一次：显示 2.pdf → PPT标签
+      activeTab.value = 'ppt'
+      nextTick(() => {
+        if (pptFrameRef.value) {
+          pptFrameRef.value.innerHTML = `
+            <iframe src="/2.pdf" width="100%" height="100%" style="border:none; border-radius:16px;"></iframe>
+          `
+        }
+      })
+    } else {
+      // 第二次：显示 2.docx → 教案标签（用你原生方法，不下载！）
+      activeTab.value = 'lesson' // 教案标签
+      nextTick(async () => {
+        const response = await fetch('/2.docx')
+        const blob = await response.blob()
+        const docxFile = new File([blob], '2.docx', { type: blob.type })
+        await handleWordPreview(docxFile) // ✅ 你原来的渲染方法，不会下载
+      })
+    }
 
-    nextTick(() => {
-      if (pptFrameRef.value) {
-        // 更新 iframe 内容
-        pptFrameRef.value.innerHTML = `
-          <iframe 
-            src="${newPdfUrl}" 
-            width="100%" 
-            height="100%" 
-            style="border:none; border-radius:16px;"
-          ></iframe>
-        `
-      }
-    })
+    // 切换状态
+    showPdfNext.value = !showPdfNext.value
+
   }, 1000)
 }
+const downloadFile = async () => {
+  let fileName, fileUrl
 
+  if (downloadFileNext.value) {
+    fileName = '课件.pdf'
+    fileUrl = '/2.pdf' // 你的文件夹里的PDF
+  } else {
+    fileName = '教案.docx'
+    fileUrl = '/2.docx' // 你的文件夹里的Word
+  }
+  // 下次切换
+  downloadFileNext.value = !downloadFileNext.value
+
+  try {
+    // 下载文件
+    const res = await fetch(fileUrl)
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('下载失败：', err)
+    alert('下载失败，请重试')
+  }
+}
 defineExpose({ setPPTData, setLessonData, setGameData })
 
 onMounted(async () => {
@@ -1206,5 +1247,28 @@ onUnmounted(() => {
     width: 160mm;
     height: 226mm;
   }
+}
+/* 固定在左下角的下载按钮 */
+.fixed-download-btn {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #409eff;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
+.fixed-download-btn:hover {
+  background: #337ecc;
+  transform: translateY(-2px);
 }
 </style>
