@@ -181,6 +181,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { renderAsync } from 'docx-preview'
 
 const router = useRouter()
 const route = useRoute()
@@ -242,14 +243,26 @@ const triggerFileUpload = () => {
 }
 
 // 处理文件上传
-const handleFileUpload = (event: Event) => {
+const handleFileUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
-  if (input.files) {
+  if (input.files && input.files.length > 0) {
     const newFiles = Array.from(input.files)
     uploadedFiles.value = [...uploadedFiles.value, ...newFiles]
+    
+    // --- 核心逻辑：获取最新上传的文件进行判断 ---
+    const file = newFiles[0]
+    const ext = file.name.split('.').pop()?.toLowerCase()
+
+    if (ext === 'pdf') {
+      handlePDFPreview(file)
+    } else if (ext === 'docx') {
+      await handleWordPreview(file)
+    }
+    // ----------------------------------------
+
     chatMessages.value.push({
       role: 'assistant',
-      content: `已收到 ${newFiles.length} 个文件，正在分析...`
+      content: `已收到 ${newFiles.length} 个文件，正在为您开启预览...`
     })
     scrollChatToBottom()
   }
@@ -422,7 +435,41 @@ const scrollChatToBottom = async () => {
     chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
   }
 }
+const handlePDFPreview = (file: File) => {
+  const url = URL.createObjectURL(file)
+  activeTab.value = 'ppt' // 切换到 PPT 标签页展示 PDF
+  nextTick(() => {
+    if (pptFrameRef.value) {
+      pptFrameRef.value.innerHTML = `
+        <iframe src="${url}" width="100%" height="100%" 
+          style="border:none; border-radius:16px;"></iframe>
+      `
+    }
+  })
+}
 
+// 处理 Word 预览：利用你现有的 A4 分页逻辑 (splitIntoPages)
+const handleWordPreview = async (file: File | Blob) => {
+  await nextTick()
+  
+  // 获取 A4 纸容器（由于你有多页，我们默认渲染到第一页或创建一个总容器）
+  const container = document.querySelector('.lesson-page-content') as HTMLElement
+  
+  if (container) {
+    container.innerHTML = '' // 清空原有 AI 生成的内容
+    try {
+      await renderAsync(file, container, undefined, {
+        className: "docx-inner", // 对应下方的 CSS
+        ignoreWidth: true,       // 适配 A4 容器宽度
+        debug: false
+      })
+      // 如果你想让 Word 也支持你的 A4 自动分页，可以在这里提取 HTML
+      // setLessonData(container.innerHTML) 
+    } catch (e) {
+      console.error('Word 渲染失败:', e)
+    }
+  }
+}
 const sendMessage = async () => {
   if ((!userInput.value.trim() && uploadedFiles.value.length === 0) || isAILoading.value) return
   
@@ -454,16 +501,46 @@ const sendMessage = async () => {
 
 defineExpose({ setPPTData, setLessonData, setGameData })
 
-onMounted(() => {
+onMounted(async () => {
+  // 1. 基础初始化
   const title = route.query.title as string
   if (title) pageTitle.value = title
-  
   initSpeechRecognition()
+
+  // 2. 核心：强制触发首次展示
+  await nextTick()
   
+  setTimeout(async () => {
+    // --- 保持原有 PDF 展示逻辑 ---
+    const defaultPdfUrl = '/1.pdf' 
+    activeTab.value = 'ppt' // 确保初始标签依然是 PPT
+    if (pptFrameRef.value) {
+      pptFrameRef.value.innerHTML = `<iframe src="${defaultPdfUrl}" width="100%" height="100%" style="border:none;"></iframe>`
+    }
+
+    // --- 新增：初始化教案预览 (静默加载) ---
+    try {
+      // 假设你的默认教案文件也放在 public 目录下，名为 1.docx
+      const response = await fetch('/1.docx')
+      if (response.ok) {
+        const blob = await response.blob()
+        const defaultDocx = new File([blob], '1.docx', { type: blob.type })
+        
+        // 调用处理函数，内部会通过 setLessonData 填充 A4 纸
+        // 注意：为避免干扰用户，请确保 handleWordPreview 内部没有强制切换 Tab 的语句
+        await handleWordPreview(defaultDocx)
+      }
+    } catch (error) {
+      console.error('初始化教案失败:', error)
+    }
+  }, 300)
+
+  // 3. 显式添加欢迎消息
   chatMessages.value.push({
     role: 'assistant',
-    content: '您好！我是您的教学AI助手。左侧可以切换预览类型，我可以帮您修改当前预览的内容！'
+    content: '🚀 系统初始化完毕！PDF 课件与 Word 教案已同步加载就绪。'
   })
+  scrollChatToBottom()
 })
 
 onUnmounted(() => {
@@ -474,6 +551,52 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+:deep(.docx-wrapper) {
+  background: transparent !important; /* 强制透明，不再显示灰色背景 */
+  padding: 0 !important;
+  display: block !important;
+  box-shadow: none !important;        /* 预防万一，也加上阴影抹除 */
+}
+
+/* 2. 抹除内容容器的所有边框、阴影和多余边距 */
+:deep(.docx-wrapper > section.docx) {
+  width: 100% !important; 
+  min-height: 100% !important;
+  padding: 0 !important;             /* 设为0，由外层 A4 容器 padding 控制 */
+  margin: 0 !important;
+  
+  /* 核心修复：彻底去掉灰色边框阴影 */
+  box-shadow: none !important;        
+  border: none !important;            
+  outline: none !important;           /* 增加一行，防止 focus 时的蓝色边框 */
+  
+  background: white !important;       /* 确保背景是纯白 */
+  box-sizing: border-box !important;
+}
+
+/* 3. 强制 Word 内部元素不再产生位移 */
+:deep(.docx-inner) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.docx-inner p) {
+  margin-top: 0 !important;
+  line-height: 1.6 !important; /* 优化阅读感 */
+}
+
+/* 4. 解决图片过大的问题 */
+:deep(.docx-inner img) {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* 针对 PDF iframe 的适配 */
+.white-frame iframe {
+  background: #f8fafc;
+}
 * {
   margin: 0;
   padding: 0;
@@ -635,7 +758,7 @@ onUnmounted(() => {
 /* 标准页边距：上下2.54cm，左右3.17cm */
 .lesson-page-content {
   height: 100%;
-  padding: 2.54cm 3.17cm;
+  padding: 0cm 0cm;
   font-size: 12pt;
   line-height: 1.5;
   font-family: '宋体', 'SimSun', serif;
