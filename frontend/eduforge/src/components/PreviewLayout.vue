@@ -533,7 +533,7 @@ const sendMessage = async () => {
     // 切换状态
     showPdfNext.value = !showPdfNext.value
 
-  }, 1000)
+  }, 4000)
 }
 const downloadFile = async () => {
   let fileName, fileUrl

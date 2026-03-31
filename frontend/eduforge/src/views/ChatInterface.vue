@@ -354,7 +354,7 @@ const interimTranscript = ref('')
 let recognition: any = null
 
  // 定义固定剧本
- const conversationScript = [
+ /*const conversationScript = [
     {
       step: 1,
       trigger: '操作系统进程调度',
@@ -369,6 +369,15 @@ let recognition: any = null
       step: 3,
       trigger: '初次授课',
       reply: '正在生成，请稍后...',
+      shouldJump: true // 最后一轮标志，准备跳转
+    }
+  ]
+*/
+  const conversationScript = [  //临时写死的剧本，后续可以改成根据用户输入动态生成
+    {
+      step: 1,
+      trigger: '操作系统进程调度',
+      reply: '正在根据上传图片生成，请稍后...',
       shouldJump: true // 最后一轮标志，准备跳转
     }
   ]
@@ -689,7 +698,7 @@ const formatFileSize = (bytes: number): string => {
       if (scriptItem.shouldJump) {
         setTimeout(() => {
           generateAllThree()
-        }, 8000)
+        }, 10000)
       }
     } else {
       // 如果超出了剧本范围的保底处理
