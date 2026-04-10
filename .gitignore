@@ -1,0 +1,3 @@
+backend/.env
+backend/temp_uploads
+postgres_data/

@@ -1,0 +1,82 @@
+# === Python 痕迹 ===
+# 必须排除本地虚拟环境，否则镜像会变得巨大且运行报错
+venv/
+.venv/
+env/
+bin/
+lib/
+# 排除 Python 编译缓存
+**/__pycache__/
+*.py[cod]
+*$py.class
+.Python
+# 排除包构建文件
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# === IDE & 编辑器 ===
+# 排除 VS Code、PyCharm 等编辑器的配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+
+# === 版本控制 ===
+# 排除 Git 仓库信息（评委不需要看到你的提交历史）
+.git/
+.gitignore
+.gitattributes
+.hg/
+.svn/
+
+# === 日志 & 临时文件 ===
+# 排除运行产生的日志和临时缓存
+*.log
+logs/
+tmp/
+temp/
+.cache/
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# === 敏感信息 (非常重要) ===
+# 绝对不要把本地的密钥、环境变量文件打入镜像
+.env
+*.env
+auth.json
+secrets.json
+*.pem
+*.key
+
+# === 操作系统杂项 ===
+# 排除 Mac 和 Windows 的系统索引文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# === 数据库 & 数据 (根据需求调整) ===
+# 如果你本地有测试用的数据库，不要带进去，以免覆盖容器内的初始化数据库
+*.db
+*.sqlite3
+data/
